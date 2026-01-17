@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+use Zufarmarwah\PerformanceGuard\Analyzers\NPlusOneAnalyzer;
+
+beforeEach(function () {
+    $this->analyzer = new NPlusOneAnalyzer;
+});
+
+it('detects N+1 queries', function () {
+    $queries = [
+        ['sql' => 'select * from users where id = 1', 'normalized' => 'select * from users where id = ?', 'duration' => 1.5, 'file' => 'app/Http/Controllers/UserController.php', 'line' => 25],
+        ['sql' => 'select * from users where id = 2', 'normalized' => 'select * from users where id = ?', 'duration' => 1.3, 'file' => 'app/Http/Controllers/UserController.php', 'line' => 25],
+        ['sql' => 'select * from users where id = 3', 'normalized' => 'select * from users where id = ?', 'duration' => 1.1, 'file' => 'app/Http/Controllers/UserController.php', 'line' => 25],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeTrue();
+    expect($result['duplicates'])->toHaveCount(1);
+    expect($result['suggestions'])->toHaveCount(1);
+});
+
+it('returns false when no duplicates exist', function () {
+    $queries = [
+        ['sql' => 'select * from users where id = 1', 'normalized' => 'select * from users where id = ?', 'duration' => 1.5, 'file' => null, 'line' => null],
+        ['sql' => 'select * from posts where id = 1', 'normalized' => 'select * from posts where id = ?', 'duration' => 2.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from comments where id = 1', 'normalized' => 'select * from comments where id = ?', 'duration' => 0.8, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeFalse();
+    expect($result['duplicates'])->toBeEmpty();
+    expect($result['suggestions'])->toBeEmpty();
+});
+
+it('suggests eager loading', function () {
+    $queries = [
+        ['sql' => 'select * from posts where user_id = 1', 'normalized' => 'select * from posts where user_id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from posts where user_id = 2', 'normalized' => 'select * from posts where user_id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeTrue();
+    expect($result['suggestions'][0])->toContain('posts');
+    expect($result['suggestions'][0])->toContain('with');
+});
+
+it('ignores different query patterns', function () {
+    $queries = [
+        ['sql' => 'select * from users where id = 1', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from posts where user_id = 1', 'normalized' => 'select * from posts where user_id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeFalse();
+});
+
+it('respects the threshold parameter', function () {
+    $queries = [
+        ['sql' => 'select * from users where id = 1', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from users where id = 2', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from users where id = 3', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+    ];
+
+    $resultLow = $this->analyzer->analyze($queries, 2);
+    expect($resultLow['hasNPlusOne'])->toBeTrue();
+
+    $resultHigh = $this->analyzer->analyze($queries, 5);
+    expect($resultHigh['hasNPlusOne'])->toBeFalse();
+});
+
+it('ignores non-select queries', function () {
+    $queries = [
+        ['sql' => 'insert into logs (message) values ("test")', 'normalized' => 'insert into logs (message) values (?)', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'insert into logs (message) values ("test2")', 'normalized' => 'insert into logs (message) values (?)', 'duration' => 1.0, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeFalse();
+});
+
+it('handles empty query list', function () {
+    $result = $this->analyzer->analyze([]);
+
+    expect($result['hasNPlusOne'])->toBeFalse();
+    expect($result['duplicates'])->toBeEmpty();
+    expect($result['suggestions'])->toBeEmpty();
+});

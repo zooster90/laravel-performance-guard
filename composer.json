@@ -1,0 +1,70 @@
+{
+    "name": "zufarmarwah/laravel-performance-guard",
+    "description": "Production-safe performance monitoring for Laravel - detect N+1 queries, slow queries, and memory issues",
+    "keywords": [
+        "laravel",
+        "performance",
+        "monitoring",
+        "n+1",
+        "slow-queries",
+        "profiling"
+    ],
+    "homepage": "https://github.com/zooster90/laravel-performance-guard",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Zufar Marwah",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1|^8.2|^8.3|^8.4",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/http": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "nunomaduro/collision": "^7.0|^8.0",
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "pestphp/pest": "^2.0|^3.0",
+        "phpstan/phpstan": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Zufarmarwah\\PerformanceGuard\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Zufarmarwah\\PerformanceGuard\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "lint": "vendor/bin/pint",
+        "lint:check": "vendor/bin/pint --test",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Zufarmarwah\\PerformanceGuard\\PerformanceGuardServiceProvider"
+            ],
+            "aliases": {
+                "PerformanceGuard": "Zufarmarwah\\PerformanceGuard\\Facades\\PerformanceGuard"
+            }
+        }
+    }
+}
