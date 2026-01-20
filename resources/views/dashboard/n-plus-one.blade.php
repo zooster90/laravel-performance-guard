@@ -1,0 +1,52 @@
+@extends('performance-guard::dashboard.layout')
+
+@section('content')
+<div class="header">
+    <h1><span>Performance</span> Guard</h1>
+    <div class="nav">
+        <a href="{{ route('performance-guard.dashboard') }}">Overview</a>
+        <a href="{{ route('performance-guard.n-plus-one') }}" class="active">N+1 Issues</a>
+        <a href="{{ route('performance-guard.slow-queries') }}">Slow Queries</a>
+    </div>
+</div>
+
+<div class="table-container">
+    <h2>Requests with N+1 Query Issues</h2>
+    @if($records->isEmpty())
+        <div class="empty-state">
+            <p>No N+1 query issues detected. Great job!</p>
+        </div>
+    @else
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>URI</th>
+                    <th>Controller</th>
+                    <th>Queries</th>
+                    <th>Duration</th>
+                    <th>Grade</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($records as $record)
+                    <tr>
+                        <td><span class="method method-{{ strtolower($record->method) }}">{{ $record->method }}</span></td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $record->uri }}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 0.75rem;">
+                            {{ $record->action ?? '-' }}
+                        </td>
+                        <td>{{ $record->query_count }}</td>
+                        <td>{{ number_format($record->duration_ms, 0) }}ms</td>
+                        <td><span class="badge badge-{{ strtolower($record->grade) }}">{{ $record->grade }}</span></td>
+                        <td style="white-space: nowrap; color: #64748b; font-size: 0.75rem;">
+                            {{ $record->created_at?->diffForHumans() }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+</div>
+@endsection

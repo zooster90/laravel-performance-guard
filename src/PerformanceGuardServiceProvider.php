@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Zufarmarwah\PerformanceGuard;
 
-use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Zufarmarwah\PerformanceGuard\Analyzers\NPlusOneAnalyzer;
 use Zufarmarwah\PerformanceGuard\Analyzers\PerformanceScorer;
+use Zufarmarwah\PerformanceGuard\Analyzers\SlowQueryAnalyzer;
+use Zufarmarwah\PerformanceGuard\Commands\CleanupCommand;
 use Zufarmarwah\PerformanceGuard\Listeners\QueryListener;
 use Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware;
+use Zufarmarwah\PerformanceGuard\Notifications\NotificationDispatcher;
 
 class PerformanceGuardServiceProvider extends ServiceProvider
 {
@@ -21,7 +23,10 @@ class PerformanceGuardServiceProvider extends ServiceProvider
 
         $this->app->singleton(QueryListener::class);
         $this->app->singleton(NPlusOneAnalyzer::class);
+        $this->app->singleton(SlowQueryAnalyzer::class);
         $this->app->singleton(PerformanceScorer::class);
+        $this->app->singleton(PerformanceGuardManager::class);
+        $this->app->singleton(NotificationDispatcher::class);
     }
 
     public function boot(): void
@@ -30,6 +35,7 @@ class PerformanceGuardServiceProvider extends ServiceProvider
         $this->publishMigrations();
         $this->registerMiddlewareAlias();
         $this->registerQueryListener();
+        $this->registerCommands();
         $this->loadRoutes();
         $this->loadViews();
     }
@@ -67,6 +73,15 @@ class PerformanceGuardServiceProvider extends ServiceProvider
         DB::listen(function (QueryExecuted $event) use ($listener) {
             $listener->recordQuery($event);
         });
+    }
+
+    private function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CleanupCommand::class,
+            ]);
+        }
     }
 
     private function loadRoutes(): void
