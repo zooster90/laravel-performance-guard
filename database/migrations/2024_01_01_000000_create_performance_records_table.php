@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->char('uuid', 36)->unique();
             $table->string('method', 10);
-            $table->text('uri');
+            $table->string('uri', 2048);
             $table->text('controller')->nullable();
             $table->text('action')->nullable();
             $table->unsignedInteger('query_count')->default(0);
@@ -22,6 +22,7 @@ return new class extends Migration
             $table->char('grade', 1);
             $table->boolean('has_n_plus_one')->default(false);
             $table->boolean('has_slow_queries')->default(false);
+            $table->unsignedSmallInteger('status_code')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->timestamp('created_at')->nullable();
@@ -29,7 +30,6 @@ return new class extends Migration
             $table->index('created_at');
             $table->index('grade');
             $table->index('has_n_plus_one');
-            $table->index('uri(255)');
         });
     }
 

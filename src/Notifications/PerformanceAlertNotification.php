@@ -6,7 +6,6 @@ namespace Zufarmarwah\PerformanceGuard\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
 
 class PerformanceAlertNotification extends Notification
@@ -32,7 +31,7 @@ class PerformanceAlertNotification extends Notification
             $channels[] = 'mail';
         }
 
-        if (! empty($config['slack']['enabled'])) {
+        if (! empty($config['slack']['enabled']) && ! empty($config['slack']['webhook_url'])) {
             $channels[] = 'slack';
         }
 
@@ -64,27 +63,32 @@ class PerformanceAlertNotification extends Notification
         return $message;
     }
 
-    public function toSlack(object $notifiable): SlackMessage
+    /**
+     * Slack notification via webhook (array format, compatible with all Laravel versions).
+     *
+     * @return array<string, mixed>
+     */
+    public function toSlack(object $notifiable): array
     {
-        $message = new SlackMessage;
-        $message->warning();
-        $message->content('Performance Alert: ' . $this->alertData['type']);
-        $message->attachment(function ($attachment) {
-            $attachment->title('Performance Issue Detected')
-                ->fields([
-                    'Type' => $this->alertData['type'],
-                    'URI' => $this->alertData['uri'] ?? 'N/A',
-                    'Duration' => ($this->alertData['duration_ms'] ?? 'N/A') . 'ms',
-                    'Grade' => $this->alertData['grade'] ?? 'N/A',
-                    'Query Count' => (string) ($this->alertData['query_count'] ?? 'N/A'),
-                ]);
+        $fields = [
+            ['title' => 'Type', 'value' => $this->alertData['type'], 'short' => true],
+            ['title' => 'URI', 'value' => $this->alertData['uri'] ?? 'N/A', 'short' => true],
+            ['title' => 'Duration', 'value' => ($this->alertData['duration_ms'] ?? 'N/A') . 'ms', 'short' => true],
+            ['title' => 'Grade', 'value' => $this->alertData['grade'] ?? 'N/A', 'short' => true],
+            ['title' => 'Queries', 'value' => (string) ($this->alertData['query_count'] ?? 'N/A'), 'short' => true],
+        ];
 
-            if (! empty($this->alertData['suggestion'])) {
-                $attachment->footer($this->alertData['suggestion']);
-            }
-        });
-
-        return $message;
+        return [
+            'text' => 'Performance Alert: ' . $this->alertData['type'],
+            'attachments' => [
+                [
+                    'color' => 'warning',
+                    'title' => 'Performance Issue Detected',
+                    'fields' => $fields,
+                    'footer' => $this->alertData['suggestion'] ?? '',
+                ],
+            ],
+        ];
     }
 
     /**

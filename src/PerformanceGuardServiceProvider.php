@@ -49,10 +49,6 @@ class PerformanceGuardServiceProvider extends ServiceProvider
 
     private function publishMigrations(): void
     {
-        $this->publishes([
-            __DIR__ . '/../database/migrations/' => database_path('migrations'),
-        ], 'performance-guard-migrations');
-
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
     }
 

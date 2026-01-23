@@ -6,6 +6,7 @@ use Zufarmarwah\PerformanceGuard\Analyzers\NPlusOneAnalyzer;
 use Zufarmarwah\PerformanceGuard\Analyzers\PerformanceScorer;
 use Zufarmarwah\PerformanceGuard\Analyzers\SlowQueryAnalyzer;
 use Zufarmarwah\PerformanceGuard\Listeners\QueryListener;
+use Zufarmarwah\PerformanceGuard\Notifications\NotificationDispatcher;
 use Zufarmarwah\PerformanceGuard\PerformanceGuardManager;
 
 it('registers singletons in the container', function () {
@@ -14,6 +15,7 @@ it('registers singletons in the container', function () {
     expect(app(SlowQueryAnalyzer::class))->toBeInstanceOf(SlowQueryAnalyzer::class);
     expect(app(PerformanceScorer::class))->toBeInstanceOf(PerformanceScorer::class);
     expect(app(PerformanceGuardManager::class))->toBeInstanceOf(PerformanceGuardManager::class);
+    expect(app(NotificationDispatcher::class))->toBeInstanceOf(NotificationDispatcher::class);
 });
 
 it('returns same instance for singletons', function () {

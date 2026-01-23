@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zufarmarwah\PerformanceGuard\Notifications;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
 class NotificationDispatcher
@@ -14,7 +15,7 @@ class NotificationDispatcher
      * @param  array{hasNPlusOne: bool, duplicates: array, suggestions: array}  $analysis
      * @param  array<int, array>  $slowQueries
      */
-    public function dispatch(array $recordData, array $analysis, array $slowQueries): void
+    public function dispatch(array $recordData, array $analysis, array $slowQueries, float $memoryMb = 0): void
     {
         if (! config('performance-guard.notifications.enabled', false)) {
             return;
@@ -60,6 +61,20 @@ class NotificationDispatcher
             ]);
         }
 
+        $memoryThreshold = (float) config('performance-guard.thresholds.memory_mb', 128);
+
+        if (! empty($notifyOn['high_memory']) && $memoryMb > $memoryThreshold) {
+            $this->sendAlert([
+                'type' => 'High Memory Usage',
+                'uri' => $recordData['uri'] ?? '',
+                'duration_ms' => $recordData['duration_ms'] ?? 0,
+                'grade' => $recordData['grade'] ?? '',
+                'query_count' => $recordData['query_count'] ?? 0,
+                'details' => 'Memory usage: ' . round($memoryMb, 2) . 'MB (threshold: ' . $memoryThreshold . 'MB)',
+                'suggestion' => 'Review data loading patterns and consider chunking or streaming large datasets.',
+            ]);
+        }
+
         if (! empty($notifyOn['grade_f']) && ($recordData['grade'] ?? '') === 'F') {
             $this->sendAlert([
                 'type' => 'Grade F Request',
@@ -98,7 +113,8 @@ class NotificationDispatcher
         $slackWebhook = config('performance-guard.notifications.channels.slack.webhook_url');
 
         if (! empty($slackWebhook)) {
-            Notification::route('slack', $slackWebhook)->notify($notification);
+            $payload = $notification->toSlack(new \stdClass);
+            Http::post($slackWebhook, $payload);
         }
     }
 }

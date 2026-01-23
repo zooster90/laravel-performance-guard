@@ -69,6 +69,7 @@ return [
         'path' => 'performance-guard',
         'middleware' => ['web'],
         'auth' => env('PERFORMANCE_GUARD_DASHBOARD_AUTH', true),
+        'gate' => 'viewPerformanceGuard',
         'allowed_ips' => [],
         'allowed_emails' => [],
     ],
@@ -135,6 +136,7 @@ return [
     |
     */
     'privacy' => [
+        'store_ip' => env('PERFORMANCE_GUARD_STORE_IP', true),
         'redact_bindings' => env('PERFORMANCE_GUARD_REDACT_BINDINGS', true),
         'redact_patterns' => [
             '/password/i',

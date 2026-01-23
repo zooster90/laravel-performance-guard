@@ -6,6 +6,7 @@ namespace Zufarmarwah\PerformanceGuard\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthorizeDashboard
@@ -33,7 +34,7 @@ class AuthorizeDashboard
             return true;
         }
 
-        if ($request->user() !== null) {
+        if ($this->passesGate($request)) {
             return true;
         }
 
@@ -66,5 +67,22 @@ class AuthorizeDashboard
         }
 
         return in_array($user->email, $allowedEmails, true);
+    }
+
+    private function passesGate(Request $request): bool
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        $gate = config('performance-guard.dashboard.gate', 'viewPerformanceGuard');
+
+        if (Gate::has($gate)) {
+            return Gate::forUser($user)->allows($gate);
+        }
+
+        return false;
     }
 }

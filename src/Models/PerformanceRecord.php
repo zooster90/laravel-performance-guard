@@ -25,6 +25,7 @@ class PerformanceRecord extends Model
         'grade',
         'has_n_plus_one',
         'has_slow_queries',
+        'status_code',
         'user_id',
         'ip_address',
         'created_at',
@@ -38,6 +39,7 @@ class PerformanceRecord extends Model
         'memory_mb' => 'float',
         'has_n_plus_one' => 'boolean',
         'has_slow_queries' => 'boolean',
+        'status_code' => 'integer',
         'user_id' => 'integer',
         'created_at' => 'datetime',
     ];

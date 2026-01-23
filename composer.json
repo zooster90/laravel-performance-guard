@@ -19,7 +19,7 @@
         }
     ],
     "require": {
-        "php": "^8.1|^8.2|^8.3|^8.4",
+        "php": "^8.1",
         "illuminate/contracts": "^10.0|^11.0|^12.0",
         "illuminate/database": "^10.0|^11.0|^12.0",
         "illuminate/http": "^10.0|^11.0|^12.0",
@@ -54,6 +54,10 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
+    },
+    "support": {
+        "issues": "https://github.com/zooster90/laravel-performance-guard/issues",
+        "source": "https://github.com/zooster90/laravel-performance-guard"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

@@ -1,5 +1,9 @@
 # Laravel Performance Guard
 
+[![Tests](https://github.com/zooster90/laravel-performance-guard/actions/workflows/tests.yml/badge.svg)](https://github.com/zooster90/laravel-performance-guard/actions)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/zufarmarwah/laravel-performance-guard.svg)](https://packagist.org/packages/zufarmarwah/laravel-performance-guard)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Production-safe performance monitoring for Laravel. Catch N+1 queries, slow queries, and performance issues before your users do.
 
 ## Features
@@ -13,6 +17,7 @@ Production-safe performance monitoring for Laravel. Catch N+1 queries, slow quer
 - **Privacy First** - Automatically redacts sensitive data from recorded queries
 - **Sampling** - Configurable sampling rate for high-traffic production environments
 - **Auto Cleanup** - Artisan command to purge old records with configurable retention
+- **High Memory Detection** - Alerts when requests exceed memory thresholds
 
 ## Requirements
 
@@ -25,13 +30,14 @@ Production-safe performance monitoring for Laravel. Catch N+1 queries, slow quer
 composer require zufarmarwah/laravel-performance-guard
 ```
 
-Publish the config and migrations:
+Publish the config file:
 
 ```bash
 php artisan vendor:publish --tag=performance-guard-config
-php artisan vendor:publish --tag=performance-guard-migrations
 php artisan migrate
 ```
+
+Migrations are loaded automatically by the package.
 
 ## Quick Start
 
@@ -67,7 +73,7 @@ return [
         'n_plus_one' => 10,       // Duplicate query count to trigger N+1 alert
         'slow_query_ms' => 300,   // Query duration threshold in ms
         'slow_request_ms' => 1000, // Request duration threshold in ms
-        'memory_mb' => 128,        // Memory usage threshold
+        'memory_mb' => 128,        // Memory usage threshold in MB
         'query_count' => 50,       // Total query count threshold
     ],
 
@@ -85,6 +91,7 @@ return [
         'path' => 'performance-guard',
         'middleware' => ['web'],
         'auth' => true,              // Require authentication
+        'gate' => 'viewPerformanceGuard', // Authorization gate
         'allowed_ips' => [],          // IP whitelist (empty = disabled)
         'allowed_emails' => [],       // Email whitelist (empty = disabled)
     ],
@@ -106,6 +113,13 @@ return [
                 'chat_id' => env('PERFORMANCE_GUARD_TELEGRAM_CHAT_ID'),
             ],
         ],
+        'notify_on' => [
+            'n_plus_one' => true,
+            'slow_query' => true,
+            'slow_request' => true,
+            'high_memory' => true,
+            'grade_f' => true,
+        ],
         'cooldown_minutes' => 15, // Prevent alert spam
     ],
 
@@ -117,16 +131,20 @@ return [
     ],
 
     'privacy' => [
+        'store_ip' => true,            // Store client IP addresses
         'redact_bindings' => true,     // Redact sensitive query values
         'redact_patterns' => [         // Patterns to trigger redaction
             '/password/i',
             '/secret/i',
             '/token/i',
             '/api_key/i',
+            '/credit_card/i',
+            '/ssn/i',
         ],
         'exclude_paths' => [           // Never monitor these paths
             '_debugbar/*',
             'telescope/*',
+            'horizon/*',
         ],
     ],
 
@@ -148,11 +166,24 @@ The built-in dashboard is available at `/performance-guard` (configurable) and s
 
 ### Dashboard Access Control
 
-By default, the dashboard requires authentication. You can also restrict access by IP or email:
+By default, the dashboard requires a Gate authorization check. Define the gate in your `AuthServiceProvider`:
+
+```php
+use Illuminate\Support\Facades\Gate;
+
+Gate::define('viewPerformanceGuard', function ($user) {
+    return in_array($user->email, [
+        'admin@example.com',
+    ]);
+});
+```
+
+You can also restrict access by IP or email whitelist:
 
 ```php
 'dashboard' => [
     'auth' => true,
+    'gate' => 'viewPerformanceGuard',
     'allowed_ips' => ['127.0.0.1', '10.0.0.1'],
     'allowed_emails' => ['admin@example.com'],
 ],
@@ -166,8 +197,8 @@ All dashboard data is available via JSON:
 
 - `GET /performance-guard/api` - Overview stats with grade distribution
 - `GET /performance-guard/api/{uuid}` - Single record with all queries
-- `GET /performance-guard/n-plus-one` - N+1 issues (accepts JSON)
-- `GET /performance-guard/slow-queries` - Slow query records (accepts JSON)
+- `GET /performance-guard/n-plus-one` - N+1 issues (accepts JSON, paginated)
+- `GET /performance-guard/slow-queries` - Slow query records (accepts JSON, paginated)
 
 ## Notifications
 
@@ -183,6 +214,7 @@ Notification types:
 - N+1 queries detected
 - Slow queries detected
 - Slow requests (exceeding threshold)
+- High memory usage (exceeding threshold)
 - Grade F requests
 
 A cooldown period prevents alert spam for the same issue.
@@ -202,7 +234,17 @@ php artisan performance-guard:cleanup --days=7
 php artisan performance-guard:cleanup --force
 ```
 
-Schedule it in your `app/Console/Kernel.php`:
+### Scheduling Cleanup
+
+**Laravel 11+ (bootstrap/app.php):**
+
+```php
+->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+    $schedule->command('performance-guard:cleanup --force')->daily();
+})
+```
+
+**Laravel 10 (app/Console/Kernel.php):**
 
 ```php
 $schedule->command('performance-guard:cleanup --force')->daily();
@@ -239,8 +281,9 @@ if (PerformanceGuard::isEnabled()) {
    - `NPlusOneAnalyzer` detects duplicate query patterns
    - `SlowQueryAnalyzer` finds queries exceeding the threshold
    - `PerformanceScorer` grades the request (A-F) based on duration
-4. Results are stored asynchronously via a queued job
+4. Results are stored asynchronously via a queued job (with DB transaction and bulk insert)
 5. Notifications are dispatched if configured (with cooldown to prevent spam)
+6. File paths are stripped of base path to prevent server directory disclosure
 
 ## Testing
 
