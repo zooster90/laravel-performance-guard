@@ -8,18 +8,28 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Zufarmarwah\PerformanceGuard\Models\PerformanceRecord;
 
 class DashboardController extends Controller
 {
+    private const MAX_PAGE = 1000;
+
     public function index(Request $request)
     {
         $period = $request->get('period', '24h');
         $since = $this->resolveSince($period);
+        $cacheKey = 'performance-guard:dashboard:' . $period;
+        $cacheTtl = (int) config('performance-guard.dashboard.cache_ttl', 60);
 
-        $stats = $this->buildStats($since);
-        $gradeDistribution = $this->getGradeDistribution($since);
+        $cached = Cache::remember($cacheKey, $cacheTtl, function () use ($since) {
+            return [
+                'stats' => $this->buildStats($since),
+                'gradeDistribution' => $this->getGradeDistribution($since),
+            ];
+        });
+
         $recentRecords = PerformanceRecord::query()
             ->where('created_at', '>=', $since)
             ->orderByDesc('created_at')
@@ -27,8 +37,8 @@ class DashboardController extends Controller
             ->get();
 
         return view('performance-guard::dashboard.index', [
-            'stats' => $stats,
-            'gradeDistribution' => $gradeDistribution,
+            'stats' => $cached['stats'],
+            'gradeDistribution' => $cached['gradeDistribution'],
             'records' => $recentRecords,
             'period' => $period,
         ]);
@@ -38,12 +48,21 @@ class DashboardController extends Controller
     {
         $period = $request->get('period', '24h');
         $since = $this->resolveSince($period);
+        $cacheKey = 'performance-guard:api:' . $period;
+        $cacheTtl = (int) config('performance-guard.dashboard.cache_ttl', 60);
+
+        $cached = Cache::remember($cacheKey, $cacheTtl, function () use ($since) {
+            return [
+                'stats' => $this->buildStats($since),
+                'grade_distribution' => $this->getGradeDistribution($since),
+            ];
+        });
 
         return new JsonResponse([
             'success' => true,
             'data' => [
-                'stats' => $this->buildStats($since),
-                'grade_distribution' => $this->getGradeDistribution($since),
+                'stats' => $cached['stats'],
+                'grade_distribution' => $cached['grade_distribution'],
                 'records' => PerformanceRecord::query()
                     ->where('created_at', '>=', $since)
                     ->orderByDesc('created_at')
@@ -67,7 +86,7 @@ class DashboardController extends Controller
 
     public function nPlusOne(Request $request)
     {
-        $page = max(1, (int) $request->get('page', 1));
+        $page = min(max(1, (int) $request->get('page', 1)), self::MAX_PAGE);
         $perPage = 50;
 
         $records = PerformanceRecord::query()
@@ -95,7 +114,7 @@ class DashboardController extends Controller
 
     public function slowQueries(Request $request)
     {
-        $page = max(1, (int) $request->get('page', 1));
+        $page = min(max(1, (int) $request->get('page', 1)), self::MAX_PAGE);
         $perPage = 50;
 
         $records = PerformanceRecord::query()
@@ -142,8 +161,8 @@ class DashboardController extends Controller
             ->selectRaw('COUNT(*) as total_requests')
             ->selectRaw('COALESCE(AVG(duration_ms), 0) as avg_duration_ms')
             ->selectRaw('COALESCE(AVG(query_count), 0) as avg_queries')
-            ->selectRaw('SUM(CASE WHEN has_n_plus_one = 1 THEN 1 ELSE 0 END) as n_plus_one_count')
-            ->selectRaw('SUM(CASE WHEN has_slow_queries = 1 THEN 1 ELSE 0 END) as slow_query_count')
+            ->selectRaw('SUM(CASE WHEN has_n_plus_one THEN 1 ELSE 0 END) as n_plus_one_count')
+            ->selectRaw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_count')
             ->selectRaw('COALESCE(AVG(memory_mb), 0) as avg_memory_mb')
             ->first();
 

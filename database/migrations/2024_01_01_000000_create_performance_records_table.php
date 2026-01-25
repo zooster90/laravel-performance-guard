@@ -30,6 +30,9 @@ return new class extends Migration
             $table->index('created_at');
             $table->index('grade');
             $table->index('has_n_plus_one');
+            $table->index(['created_at', 'grade']);
+            $table->index(['created_at', 'has_n_plus_one']);
+            $table->index(['created_at', 'has_slow_queries']);
         });
     }
 

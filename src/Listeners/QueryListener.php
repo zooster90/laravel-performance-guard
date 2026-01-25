@@ -13,10 +13,13 @@ class QueryListener
 
     private bool $listening = false;
 
+    private bool $limitReached = false;
+
     public function start(): void
     {
         $this->queries = [];
         $this->listening = true;
+        $this->limitReached = false;
     }
 
     public function stop(): void
@@ -35,17 +38,37 @@ class QueryListener
             return;
         }
 
+        $maxQueries = (int) config('performance-guard.thresholds.max_queries_per_request', 1000);
+
+        if (count($this->queries) >= $maxQueries) {
+            $this->limitReached = true;
+
+            return;
+        }
+
         $trace = $this->findSource();
         $normalized = $this->normalizeQuery($event->sql);
 
+        $maxSqlLength = (int) config('performance-guard.thresholds.max_sql_length', 8000);
+        $sql = $event->sql;
+
+        if (strlen($sql) > $maxSqlLength) {
+            $sql = substr($sql, 0, $maxSqlLength) . '... [truncated]';
+        }
+
         $this->queries[] = [
-            'sql' => $event->sql,
+            'sql' => $sql,
             'bindings' => $event->bindings,
             'duration' => $event->time,
             'file' => $trace['file'],
             'line' => $trace['line'],
             'normalized' => $normalized,
         ];
+    }
+
+    public function wasLimitReached(): bool
+    {
+        return $this->limitReached;
     }
 
     /**
@@ -138,6 +161,7 @@ class QueryListener
     {
         $this->queries = [];
         $this->listening = false;
+        $this->limitReached = false;
     }
 
     /**

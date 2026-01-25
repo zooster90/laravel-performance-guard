@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Zufarmarwah\PerformanceGuard\Commands;
 
 use Illuminate\Console\Command;
+use Zufarmarwah\PerformanceGuard\Models\PerformanceQuery;
 use Zufarmarwah\PerformanceGuard\Models\PerformanceRecord;
 
 class CleanupCommand extends Command
@@ -34,9 +35,27 @@ class CleanupCommand extends Command
             return self::SUCCESS;
         }
 
-        $deleted = PerformanceRecord::where('created_at', '<', $cutoff)->delete();
+        $chunkSize = 1000;
+        $totalDeleted = 0;
 
-        $this->info("Deleted {$deleted} performance records older than {$days} days.");
+        do {
+            $recordIds = PerformanceRecord::where('created_at', '<', $cutoff)
+                ->limit($chunkSize)
+                ->pluck('id');
+
+            if ($recordIds->isEmpty()) {
+                break;
+            }
+
+            PerformanceQuery::whereIn('performance_record_id', $recordIds)->delete();
+            $deleted = PerformanceRecord::whereIn('id', $recordIds)->delete();
+            $totalDeleted += $deleted;
+
+            $this->output->write("\rDeleted {$totalDeleted} of ~{$count} records...");
+        } while ($deleted >= $chunkSize);
+
+        $this->newLine();
+        $this->info("Deleted {$totalDeleted} performance records older than {$days} days.");
 
         return self::SUCCESS;
     }

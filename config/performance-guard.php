@@ -38,6 +38,8 @@ return [
         'slow_request_ms' => env('PERFORMANCE_GUARD_SLOW_REQUEST_MS', 1000),
         'memory_mb' => env('PERFORMANCE_GUARD_MEMORY_MB', 128),
         'query_count' => env('PERFORMANCE_GUARD_QUERY_COUNT', 50),
+        'max_queries_per_request' => env('PERFORMANCE_GUARD_MAX_QUERIES', 1000),
+        'max_sql_length' => env('PERFORMANCE_GUARD_MAX_SQL_LENGTH', 8000),
     ],
 
     /*
@@ -72,6 +74,7 @@ return [
         'gate' => 'viewPerformanceGuard',
         'allowed_ips' => [],
         'allowed_emails' => [],
+        'cache_ttl' => env('PERFORMANCE_GUARD_DASHBOARD_CACHE_TTL', 60),
     ],
 
     /*

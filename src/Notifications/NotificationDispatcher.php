@@ -6,6 +6,7 @@ namespace Zufarmarwah\PerformanceGuard\Notifications;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 class NotificationDispatcher
@@ -107,14 +108,26 @@ class NotificationDispatcher
         $emailRecipients = config('performance-guard.notifications.channels.email.recipients', []);
 
         if (! empty($emailRecipients)) {
-            Notification::route('mail', $emailRecipients)->notify($notification);
+            try {
+                Notification::route('mail', $emailRecipients)->notify($notification);
+            } catch (\Throwable $e) {
+                Log::warning('Performance Guard: email notification failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $slackWebhook = config('performance-guard.notifications.channels.slack.webhook_url');
 
         if (! empty($slackWebhook)) {
-            $payload = $notification->toSlack(new \stdClass);
-            Http::post($slackWebhook, $payload);
+            try {
+                $payload = $notification->toSlack(new \stdClass);
+                Http::timeout(5)->post($slackWebhook, $payload);
+            } catch (\Throwable $e) {
+                Log::warning('Performance Guard: slack notification failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }
