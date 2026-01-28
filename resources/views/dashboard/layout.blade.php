@@ -24,6 +24,7 @@
         .stat-card .value.warning { color: #fbbf24; }
         .stat-card .value.danger { color: #f87171; }
         .stat-card .value.success { color: #34d399; }
+        .stat-card .trend { margin-top: 0.25rem; }
         .grade-bar { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
         .grade-item { flex: 1; text-align: center; padding: 0.75rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid #334155; }
         .grade-item .letter { font-size: 1.25rem; font-weight: 700; }

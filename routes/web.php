@@ -18,4 +18,5 @@ Route::prefix($path)
         Route::get('/api/{uuid}', [DashboardController::class, 'show'])->name('performance-guard.show')->where('uuid', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
         Route::get('/n-plus-one', [DashboardController::class, 'nPlusOne'])->name('performance-guard.n-plus-one');
         Route::get('/slow-queries', [DashboardController::class, 'slowQueries'])->name('performance-guard.slow-queries');
+        Route::get('/routes', [DashboardController::class, 'routes'])->name('performance-guard.routes');
     });

@@ -20,12 +20,14 @@ class DashboardController extends Controller
     {
         $period = $request->get('period', '24h');
         $since = $this->resolveSince($period);
+        $previousSince = $this->resolvePreviousSince($period);
         $cacheKey = 'performance-guard:dashboard:' . $period;
         $cacheTtl = (int) config('performance-guard.dashboard.cache_ttl', 60);
 
-        $cached = Cache::remember($cacheKey, $cacheTtl, function () use ($since) {
+        $cached = Cache::remember($cacheKey, $cacheTtl, function () use ($since, $previousSince) {
             return [
                 'stats' => $this->buildStats($since),
+                'previousStats' => $this->buildStats($previousSince, $since),
                 'gradeDistribution' => $this->getGradeDistribution($since),
             ];
         });
@@ -38,6 +40,7 @@ class DashboardController extends Controller
 
         return view('performance-guard::dashboard.index', [
             'stats' => $cached['stats'],
+            'previousStats' => $cached['previousStats'],
             'gradeDistribution' => $cached['gradeDistribution'],
             'records' => $recentRecords,
             'period' => $period,
@@ -140,6 +143,34 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function routes(Request $request)
+    {
+        $period = $request->get('period', '24h');
+        $since = $this->resolveSince($period);
+        $page = min(max(1, (int) $request->get('page', 1)), self::MAX_PAGE);
+        $perPage = 50;
+
+        $routes = $this->getRouteStats($since, $perPage, $page);
+
+        if ($request->wantsJson()) {
+            return new JsonResponse([
+                'success' => true,
+                'data' => $routes->items(),
+                'meta' => [
+                    'total' => $routes->total(),
+                    'page' => $routes->currentPage(),
+                    'per_page' => $routes->perPage(),
+                    'last_page' => $routes->lastPage(),
+                ],
+            ]);
+        }
+
+        return view('performance-guard::dashboard.routes', [
+            'routes' => $routes,
+            'period' => $period,
+        ]);
+    }
+
     private function resolveSince(string $period): Carbon
     {
         return match ($period) {
@@ -151,13 +182,53 @@ class DashboardController extends Controller
         };
     }
 
+    private function resolvePreviousSince(string $period): Carbon
+    {
+        return match ($period) {
+            '1h' => now()->subHours(2),
+            '24h' => now()->subDays(2),
+            '7d' => now()->subWeeks(2),
+            '30d' => now()->subMonths(2),
+            default => now()->subDays(2),
+        };
+    }
+
+    /**
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    private function getRouteStats(Carbon $since, int $perPage, int $page)
+    {
+        return PerformanceRecord::query()
+            ->where('created_at', '>=', $since)
+            ->select(
+                'method',
+                'uri',
+                DB::raw('COUNT(*) as request_count'),
+                DB::raw('ROUND(AVG(duration_ms), 0) as avg_duration'),
+                DB::raw('ROUND(AVG(query_count), 0) as avg_queries'),
+                DB::raw('ROUND(AVG(memory_mb), 1) as avg_memory'),
+                DB::raw('MAX(grade) as worst_grade'),
+                DB::raw('SUM(CASE WHEN has_n_plus_one THEN 1 ELSE 0 END) as n_plus_one_hits'),
+                DB::raw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_hits')
+            )
+            ->groupBy('method', 'uri')
+            ->orderByDesc(DB::raw('AVG(duration_ms)'))
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
+
     /**
      * @return array<string, mixed>
      */
-    private function buildStats(Carbon $since): array
+    private function buildStats(Carbon $since, ?Carbon $until = null): array
     {
-        $result = PerformanceRecord::query()
-            ->where('created_at', '>=', $since)
+        $query = PerformanceRecord::query()
+            ->where('created_at', '>=', $since);
+
+        if ($until !== null) {
+            $query->where('created_at', '<', $until);
+        }
+
+        $result = $query
             ->selectRaw('COUNT(*) as total_requests')
             ->selectRaw('COALESCE(AVG(duration_ms), 0) as avg_duration_ms')
             ->selectRaw('COALESCE(AVG(query_count), 0) as avg_queries')

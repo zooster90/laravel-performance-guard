@@ -92,3 +92,28 @@ it('handles empty query list', function () {
     expect($result['duplicates'])->toBeEmpty();
     expect($result['suggestions'])->toBeEmpty();
 });
+
+it('suggests parent model for eager loading', function () {
+    $queries = [
+        ['sql' => 'select * from comments where post_id = 1', 'normalized' => 'select * from comments where post_id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+        ['sql' => 'select * from comments where post_id = 2', 'normalized' => 'select * from comments where post_id = ?', 'duration' => 1.0, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeTrue();
+    expect($result['suggestions'][0])->toContain('Post');
+    expect($result['suggestions'][0])->toContain('comment');
+});
+
+it('includes file location in suggestions', function () {
+    $queries = [
+        ['sql' => 'select * from users where id = 1', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => 'app/Http/Controllers/UserController.php', 'line' => 42],
+        ['sql' => 'select * from users where id = 2', 'normalized' => 'select * from users where id = ?', 'duration' => 1.0, 'file' => 'app/Http/Controllers/UserController.php', 'line' => 42],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['suggestions'][0])->toContain('UserController.php');
+    expect($result['suggestions'][0])->toContain('42');
+});

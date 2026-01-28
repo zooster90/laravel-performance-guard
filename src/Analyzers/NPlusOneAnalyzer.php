@@ -41,6 +41,8 @@ class NPlusOneAnalyzer
                     'count' => 0,
                     'sql' => $query['sql'],
                     'indices' => [],
+                    'file' => $query['file'] ?? null,
+                    'line' => $query['line'] ?? null,
                 ];
             }
 
@@ -79,21 +81,49 @@ class NPlusOneAnalyzer
         foreach ($duplicates as $normalized => $group) {
             $table = $this->extractTableName($group['sql']);
             $count = $group['count'];
+            $location = $this->formatLocation($group['file'] ?? null, $group['line'] ?? null);
+            $parentTable = $this->extractParentTable($group['sql']);
 
             if ($table !== null) {
                 $relationship = $this->guessRelationshipName($table);
-                $suggestions[] = sprintf(
-                    'Query on "%s" executed %d times. Consider adding ->with([\'%s\']) to eager load this relationship.',
+                $parentModel = $parentTable !== null ? $this->tableToModel($parentTable) : null;
+
+                $suggestion = sprintf(
+                    'Query on "%s" executed %d times.',
                     $table,
-                    $count,
-                    $relationship
+                    $count
                 );
+
+                if ($parentModel !== null) {
+                    $suggestion .= sprintf(
+                        ' In your %s model, add ->with(\'%s\') to the query.',
+                        $parentModel,
+                        $relationship
+                    );
+                } else {
+                    $suggestion .= sprintf(
+                        ' Add ->with(\'%s\') to eager load this relationship.',
+                        $relationship
+                    );
+                }
+
+                if ($location !== '') {
+                    $suggestion .= ' ' . $location;
+                }
+
+                $suggestions[] = $suggestion;
             } else {
-                $suggestions[] = sprintf(
+                $suggestion = sprintf(
                     'Duplicate query executed %d times: %s. Consider eager loading or caching.',
                     $count,
                     mb_substr($group['sql'], 0, 100)
                 );
+
+                if ($location !== '') {
+                    $suggestion .= ' ' . $location;
+                }
+
+                $suggestions[] = $suggestion;
             }
         }
 
@@ -125,5 +155,49 @@ class NPlusOneAnalyzer
         }
 
         return $name;
+    }
+
+    /**
+     * Extract the parent table from a WHERE clause like "WHERE post_id = ?".
+     */
+    private function extractParentTable(string $sql): ?string
+    {
+        if (preg_match('/where\s+[`"]?(\w+)_id[`"]?\s*=\s*(?:\?|\d+)/i', $sql, $matches)) {
+            return $matches[1] . 's';
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert a table name to a model name (e.g., "posts" -> "Post").
+     */
+    private function tableToModel(string $table): string
+    {
+        $singular = rtrim($table, 's');
+
+        if (str_ends_with($table, 'ies')) {
+            $singular = substr($table, 0, -3) . 'y';
+        }
+
+        return ucfirst($singular);
+    }
+
+    private function formatLocation(?string $file, ?int $line): string
+    {
+        if ($file === null) {
+            return '';
+        }
+
+        $basePath = base_path() . DIRECTORY_SEPARATOR;
+        $relativePath = str_starts_with($file, $basePath)
+            ? substr($file, strlen($basePath))
+            : $file;
+
+        if ($line !== null) {
+            return sprintf('[%s:%d]', $relativePath, $line);
+        }
+
+        return sprintf('[%s]', $relativePath);
     }
 }

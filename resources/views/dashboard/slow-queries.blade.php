@@ -7,6 +7,7 @@
         <a href="{{ route('performance-guard.dashboard') }}">Overview</a>
         <a href="{{ route('performance-guard.n-plus-one') }}">N+1 Issues</a>
         <a href="{{ route('performance-guard.slow-queries') }}" class="active">Slow Queries</a>
+        <a href="{{ route('performance-guard.routes') }}">Routes</a>
     </div>
 </div>
 
