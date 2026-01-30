@@ -8,7 +8,7 @@ use Illuminate\Database\Events\QueryExecuted;
 
 class QueryListener
 {
-    /** @var array<int, array{sql: string, bindings: array, duration: float, file: string|null, line: int|null, normalized: string}> */
+    /** @var array<int, array{sql: string, duration: float, file: string|null, line: int|null, normalized: string}> */
     private array $queries = [];
 
     private bool $listening = false;
@@ -58,7 +58,6 @@ class QueryListener
 
         $this->queries[] = [
             'sql' => $sql,
-            'bindings' => $event->bindings,
             'duration' => $event->time,
             'file' => $trace['file'],
             'line' => $trace['line'],
@@ -72,7 +71,7 @@ class QueryListener
     }
 
     /**
-     * @return array<int, array{sql: string, bindings: array, duration: float, file: string|null, line: int|null, normalized: string}>
+     * @return array<int, array{sql: string, duration: float, file: string|null, line: int|null, normalized: string}>
      */
     public function getQueries(): array
     {
@@ -142,7 +141,7 @@ class QueryListener
     }
 
     /**
-     * @return array<int, array{sql: string, bindings: array, duration: float, file: string|null, line: int|null, normalized: string}>
+     * @return array<int, array{sql: string, duration: float, file: string|null, line: int|null, normalized: string}>
      */
     public function getSlowQueries(float $thresholdMs): array
     {
@@ -183,34 +182,27 @@ class QueryListener
      */
     private function findSource(): array
     {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 30);
-
-        $excludePatterns = [
-            '/vendor\/laravel\/framework/',
-            '/vendor\/zufarmarwah/',
-            '/Illuminate/',
-        ];
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 
         foreach ($trace as $frame) {
             if (! isset($frame['file'])) {
                 continue;
             }
 
-            $excluded = false;
+            $file = $frame['file'];
 
-            foreach ($excludePatterns as $pattern) {
-                if (preg_match($pattern, $frame['file'])) {
-                    $excluded = true;
-                    break;
-                }
+            if (
+                str_contains($file, 'vendor' . DIRECTORY_SEPARATOR . 'laravel' . DIRECTORY_SEPARATOR . 'framework')
+                || str_contains($file, 'vendor' . DIRECTORY_SEPARATOR . 'zufarmarwah')
+                || str_contains($file, 'Illuminate' . DIRECTORY_SEPARATOR)
+            ) {
+                continue;
             }
 
-            if (! $excluded) {
-                return [
-                    'file' => $frame['file'],
-                    'line' => $frame['line'] ?? null,
-                ];
-            }
+            return [
+                'file' => $file,
+                'line' => $frame['line'] ?? null,
+            ];
         }
 
         return ['file' => null, 'line' => null];

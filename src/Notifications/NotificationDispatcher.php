@@ -122,7 +122,7 @@ class NotificationDispatcher
         if (! empty($slackWebhook)) {
             try {
                 $payload = $notification->toSlack(new \stdClass);
-                Http::timeout(5)->post($slackWebhook, $payload);
+                Http::connectTimeout(1)->timeout(2)->post($slackWebhook, $payload);
             } catch (\Throwable $e) {
                 Log::warning('Performance Guard: slack notification failed', [
                     'error' => $e->getMessage(),

@@ -34,13 +34,19 @@ class PerformanceMonitoringMiddleware
 
         $this->queryListener->start();
 
-        $response = $next($request);
+        try {
+            $response = $next($request);
+        } catch (\Throwable $e) {
+            $this->queryListener->stop();
+
+            throw $e;
+        }
 
         $this->queryListener->stop();
 
         try {
             $durationMs = (microtime(true) - $startTime) * 1000;
-            $memoryMb = (memory_get_usage(true) - $startMemory) / 1024 / 1024;
+            $memoryMb = max(0, memory_get_usage(true) - $startMemory) / 1024 / 1024;
 
             $this->recordPerformance($request, $response, $durationMs, $memoryMb);
         } catch (\Throwable $e) {
