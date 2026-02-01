@@ -129,5 +129,26 @@ class NotificationDispatcher
                 ]);
             }
         }
+
+        $telegramConfig = config('performance-guard.notifications.channels.telegram', []);
+        $botToken = $telegramConfig['bot_token'] ?? null;
+        $chatId = $telegramConfig['chat_id'] ?? null;
+
+        if (! empty($botToken) && ! empty($chatId)) {
+            try {
+                Http::connectTimeout(1)->timeout(2)->post(
+                    "https://api.telegram.org/bot{$botToken}/sendMessage",
+                    [
+                        'chat_id' => $chatId,
+                        'text' => $notification->toTelegram(),
+                        'parse_mode' => 'Markdown',
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Performance Guard: telegram notification failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }

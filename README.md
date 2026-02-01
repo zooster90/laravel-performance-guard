@@ -18,11 +18,24 @@ Production-safe performance monitoring for Laravel. Catch N+1 queries, slow quer
 - **Sampling** - Configurable sampling rate for high-traffic production environments
 - **Auto Cleanup** - Artisan command to purge old records with configurable retention
 - **High Memory Detection** - Alerts when requests exceed memory thresholds
+- **Route Aggregation** - Per-route performance breakdown to find your slowest endpoints
+- **Trend Comparison** - Period-over-period comparison showing improvement or regression
+- **Artisan Status Command** - Quick terminal overview of performance health
 
 ## Requirements
 
 - PHP 8.1+
 - Laravel 10, 11, or 12
+
+## Database Compatibility
+
+Works with any database supported by Laravel's query builder:
+
+- **MySQL / MariaDB** - Fully tested
+- **PostgreSQL** - Fully compatible (uses `CASE WHEN` syntax, not boolean `= 1`)
+- **SQLite** - Fully compatible (used in test suite)
+- **SQL Server** - Compatible via Laravel's query builder abstraction
+- **Supabase** - Works (Supabase uses PostgreSQL)
 
 ## Installation
 
@@ -159,9 +172,10 @@ return [
 
 The built-in dashboard is available at `/performance-guard` (configurable) and shows:
 
-- **Overview** - Total requests, average duration, query counts, memory usage, grade distribution
+- **Overview** - Total requests, average duration, query counts, memory usage, grade distribution, with trend indicators showing improvement/regression vs. previous period
 - **N+1 Issues** - All requests where N+1 patterns were detected
 - **Slow Queries** - All requests containing slow database queries
+- **Routes** - Per-route performance aggregation showing avg duration, avg queries, avg memory, worst grade, and issue counts
 - **Period Filtering** - View data for last 1 hour, 24 hours, 7 days, or 30 days
 
 ### Dashboard Access Control
@@ -199,17 +213,44 @@ All dashboard data is available via JSON:
 - `GET /performance-guard/api/{uuid}` - Single record with all queries
 - `GET /performance-guard/n-plus-one` - N+1 issues (accepts JSON, paginated)
 - `GET /performance-guard/slow-queries` - Slow query records (accepts JSON, paginated)
+- `GET /performance-guard/routes` - Route-level aggregated performance (accepts JSON, paginated)
 
 ## Notifications
 
-Enable alerts to get notified when performance issues occur:
+Enable alerts to get notified when performance issues occur.
+
+### Slack
 
 ```env
 PERFORMANCE_GUARD_NOTIFICATIONS=true
 PERFORMANCE_GUARD_SLACK_WEBHOOK=https://hooks.slack.com/services/...
 ```
 
-Notification types:
+### Telegram
+
+```env
+PERFORMANCE_GUARD_NOTIFICATIONS=true
+PERFORMANCE_GUARD_TELEGRAM_TOKEN=123456:ABC-DEF...
+PERFORMANCE_GUARD_TELEGRAM_CHAT_ID=-1001234567890
+```
+
+To get your Telegram bot token, message [@BotFather](https://t.me/BotFather). To get your chat ID, add the bot to a group and check `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+
+### Email
+
+```php
+'notifications' => [
+    'enabled' => true,
+    'channels' => [
+        'email' => [
+            'enabled' => true,
+            'recipients' => ['ops@yourcompany.com'],
+        ],
+    ],
+],
+```
+
+### Notification Types
 
 - N+1 queries detected
 - Slow queries detected
@@ -217,7 +258,7 @@ Notification types:
 - High memory usage (exceeding threshold)
 - Grade F requests
 
-A cooldown period prevents alert spam for the same issue.
+A cooldown period (default: 15 minutes) prevents alert spam for the same issue on the same URI.
 
 ## Cleanup
 
@@ -248,6 +289,57 @@ php artisan performance-guard:cleanup --force
 
 ```php
 $schedule->command('performance-guard:cleanup --force')->daily();
+```
+
+## Status Command
+
+Get a quick performance overview from the terminal:
+
+```bash
+php artisan performance-guard:status
+```
+
+Shows total requests, avg duration, avg queries, memory usage, N+1 count, slow query count, grade distribution, and the 5 slowest routes — all with trend indicators comparing against the previous period.
+
+```bash
+# View different time periods
+php artisan performance-guard:status --period=1h
+php artisan performance-guard:status --period=24h
+php artisan performance-guard:status --period=7d
+php artisan performance-guard:status --period=30d
+```
+
+## Production Deployment
+
+Recommended `.env` settings for production:
+
+```env
+PERFORMANCE_GUARD_ENABLED=true
+PERFORMANCE_GUARD_SAMPLING_RATE=0.1
+PERFORMANCE_GUARD_ASYNC=true
+PERFORMANCE_GUARD_QUEUE=performance
+PERFORMANCE_GUARD_RETENTION_DAYS=14
+```
+
+| Setting | Recommendation | Why |
+| --- | --- | --- |
+| `SAMPLING_RATE=0.1` | Monitor 10% of requests | Reduces overhead while still catching patterns |
+| `ASYNC=true` | Store via queue (default) | Recording never blocks the HTTP response |
+| `QUEUE=performance` | Dedicated queue | Prevents monitoring jobs from competing with business logic |
+| `RETENTION_DAYS=14` | 2 weeks | Keeps database size manageable |
+
+### Disabling in emergencies
+
+If you suspect the package is causing issues, disable it instantly without a deploy:
+
+```env
+PERFORMANCE_GUARD_ENABLED=false
+```
+
+Or at runtime:
+
+```php
+PerformanceGuard::disable();
 ```
 
 ## Facade

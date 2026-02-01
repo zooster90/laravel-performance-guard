@@ -92,6 +92,32 @@ class PerformanceAlertNotification extends Notification
     }
 
     /**
+     * Telegram notification message (plain text with Markdown).
+     */
+    public function toTelegram(): string
+    {
+        $lines = [
+            '*Performance Alert: ' . $this->alertData['type'] . '*',
+            '',
+            'URI: `' . ($this->alertData['uri'] ?? 'N/A') . '`',
+            'Duration: ' . ($this->alertData['duration_ms'] ?? 'N/A') . 'ms',
+            'Grade: ' . ($this->alertData['grade'] ?? 'N/A'),
+            'Queries: ' . ($this->alertData['query_count'] ?? 'N/A'),
+        ];
+
+        if (! empty($this->alertData['details'])) {
+            $lines[] = 'Details: ' . $this->alertData['details'];
+        }
+
+        if (! empty($this->alertData['suggestion'])) {
+            $lines[] = '';
+            $lines[] = '_Suggestion: ' . $this->alertData['suggestion'] . '_';
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
