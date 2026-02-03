@@ -37,7 +37,7 @@ class PerformanceMonitoringMiddleware
         try {
             $response = $next($request);
         } catch (\Throwable $e) {
-            $this->queryListener->stop();
+            $this->queryListener->reset();
 
             throw $e;
         }
@@ -55,12 +55,18 @@ class PerformanceMonitoringMiddleware
             ]);
         }
 
+        $this->queryListener->reset();
+
         return $response;
     }
 
     private function shouldMonitor(Request $request): bool
     {
         if (! config('performance-guard.enabled', true)) {
+            return false;
+        }
+
+        if (in_array($request->method(), ['OPTIONS', 'HEAD'], true)) {
             return false;
         }
 
@@ -113,9 +119,15 @@ class PerformanceMonitoringMiddleware
             }
         }
 
+        $uri = $request->path();
+
+        if (strlen($uri) > 2048) {
+            $uri = substr($uri, 0, 2048);
+        }
+
         $recordData = [
             'method' => $request->method(),
-            'uri' => $request->path(),
+            'uri' => $uri,
             'controller' => $controller,
             'action' => $action,
             'query_count' => count($queries),
