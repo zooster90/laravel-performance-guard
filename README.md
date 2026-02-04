@@ -1,41 +1,81 @@
-# Laravel Performance Guard
+<p align="center">
+  <h1 align="center">Laravel Performance Guard</h1>
+  <p align="center">Production-safe performance monitoring for Laravel. Catch N+1 queries, slow queries, and performance issues before your users do.</p>
+</p>
 
-[![Tests](https://github.com/zooster90/laravel-performance-guard/actions/workflows/tests.yml/badge.svg)](https://github.com/zooster90/laravel-performance-guard/actions)
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/zufarmarwah/laravel-performance-guard.svg)](https://packagist.org/packages/zufarmarwah/laravel-performance-guard)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/zooster90/laravel-performance-guard/actions/workflows/tests.yml"><img src="https://github.com/zooster90/laravel-performance-guard/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://packagist.org/packages/zufarmarwah/laravel-performance-guard"><img src="https://img.shields.io/packagist/v/zufarmarwah/laravel-performance-guard.svg" alt="Latest Version"></a>
+  <a href="https://packagist.org/packages/zufarmarwah/laravel-performance-guard"><img src="https://img.shields.io/packagist/dt/zufarmarwah/laravel-performance-guard.svg" alt="Total Downloads"></a>
+  <a href="https://packagist.org/packages/zufarmarwah/laravel-performance-guard"><img src="https://img.shields.io/packagist/php-v/zufarmarwah/laravel-performance-guard.svg" alt="PHP Version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+</p>
 
-Production-safe performance monitoring for Laravel. Catch N+1 queries, slow queries, and performance issues before your users do.
+---
+
+## Why Performance Guard?
+
+Most performance issues in Laravel apps go unnoticed until users complain. N+1 queries silently multiply, slow queries stack up, and memory usage creeps higher with every deployment.
+
+**Performance Guard** sits in your middleware stack, monitors every request, and gives you a clear picture of what's happening -- with zero changes to your application code.
+
+- **Drop-in middleware** -- no code changes required in your controllers or models
+- **Production-safe** -- configurable sampling, async storage, and instant kill switch
+- **Actionable insights** -- tells you *which* relationship to eager load, not just "you have duplicates"
+- **Privacy-first** -- automatically redacts passwords, tokens, and sensitive data from recorded queries
 
 ## Features
 
-- **N+1 Query Detection** - Automatically detects N+1 query patterns and suggests eager loading fixes
-- **Slow Query Monitoring** - Identifies slow database queries with optimization suggestions
-- **Performance Grading** - Grades every request A-F based on response time
-- **Built-in Dashboard** - Dark-themed dashboard to visualize performance metrics
-- **Notifications** - Alerts via Slack, Email, or Telegram when issues are detected
-- **Queue Support** - Stores metrics asynchronously to avoid impacting request performance
-- **Privacy First** - Automatically redacts sensitive data from recorded queries
-- **Sampling** - Configurable sampling rate for high-traffic production environments
-- **Auto Cleanup** - Artisan command to purge old records with configurable retention
-- **High Memory Detection** - Alerts when requests exceed memory thresholds
-- **Route Aggregation** - Per-route performance breakdown to find your slowest endpoints
-- **Trend Comparison** - Period-over-period comparison showing improvement or regression
-- **Artisan Status Command** - Quick terminal overview of performance health
+- **N+1 Query Detection** -- detects duplicate query patterns and suggests eager loading fixes
+- **Slow Query Monitoring** -- identifies slow queries with optimization suggestions
+- **Performance Grading** -- grades every request A-F based on response time
+- **Built-in Dashboard** -- dark-themed dashboard to visualize performance metrics
+- **Notifications** -- alerts via Slack, Email, or Telegram when issues are detected
+- **Queue Support** -- stores metrics asynchronously to avoid impacting request performance
+- **Privacy First** -- automatically redacts sensitive data from recorded queries
+- **Sampling** -- configurable sampling rate for high-traffic production environments
+- **Auto Cleanup** -- artisan command to purge old records with configurable retention
+- **High Memory Detection** -- alerts when requests exceed memory thresholds
+- **Route Aggregation** -- per-route performance breakdown to find your slowest endpoints
+- **Trend Comparison** -- period-over-period comparison showing improvement or regression
+- **Artisan Status Command** -- quick terminal overview of performance health
+- **Octane Compatible** -- safe for long-running processes with proper state isolation
+
+## Screenshots
+
+<!-- Replace these with actual screenshots from your app -->
+
+> **Dashboard Overview** -- stats cards with trend indicators, grade distribution, and recent requests table
+
+![Dashboard Overview](docs/screenshots/dashboard-overview.png)
+
+> **N+1 Detection** -- flagged requests with duplicate query patterns
+
+![N+1 Detection](docs/screenshots/n-plus-one.png)
+
+> **Route Performance** -- per-route aggregation showing avg duration, queries, and grades
+
+![Route Performance](docs/screenshots/routes.png)
+
+> **Artisan Status** -- terminal-based performance overview
+
+![Artisan Status](docs/screenshots/artisan-status.png)
 
 ## Requirements
 
 - PHP 8.1+
 - Laravel 10, 11, or 12
 
-## Database Compatibility
+### Database Compatibility
 
-Works with any database supported by Laravel's query builder:
+Works with any database supported by Laravel:
 
-- **MySQL / MariaDB** - Fully tested
-- **PostgreSQL** - Fully compatible (uses `CASE WHEN` syntax, not boolean `= 1`)
-- **SQLite** - Fully compatible (used in test suite)
-- **SQL Server** - Compatible via Laravel's query builder abstraction
-- **Supabase** - Works (Supabase uses PostgreSQL)
+| Database | Status |
+|----------|--------|
+| MySQL / MariaDB | Fully tested |
+| PostgreSQL | Fully compatible |
+| SQLite | Fully compatible (used in test suite) |
+| SQL Server | Compatible via query builder |
 
 ## Installation
 
@@ -43,36 +83,34 @@ Works with any database supported by Laravel's query builder:
 composer require zufarmarwah/laravel-performance-guard
 ```
 
-Publish the config file:
+Publish the config and run migrations:
 
 ```bash
 php artisan vendor:publish --tag=performance-guard-config
 php artisan migrate
 ```
 
-Migrations are loaded automatically by the package.
-
 ## Quick Start
 
-Add the middleware to any route or group you want to monitor:
+Add the middleware to any route or group:
 
 ```php
-// In a route group
+// Monitor a group of routes
 Route::middleware(['performance-guard'])->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/posts', [PostController::class, 'index']);
 });
 
-// On a single route
+// Monitor a single route
 Route::get('/dashboard', DashboardController::class)
     ->middleware('performance-guard');
 ```
 
-That's it. Visit `/performance-guard` in your browser to see the dashboard.
+Visit `/performance-guard` in your browser. That's it.
 
 ## Configuration
 
-The config file (`config/performance-guard.php`) provides full control:
+After publishing, edit `config/performance-guard.php`:
 
 ```php
 return [
@@ -83,11 +121,11 @@ return [
     'sampling_rate' => env('PERFORMANCE_GUARD_SAMPLING_RATE', 1.0),
 
     'thresholds' => [
-        'n_plus_one' => 10,       // Duplicate query count to trigger N+1 alert
-        'slow_query_ms' => 300,   // Query duration threshold in ms
-        'slow_request_ms' => 1000, // Request duration threshold in ms
-        'memory_mb' => 128,        // Memory usage threshold in MB
-        'query_count' => 50,       // Total query count threshold
+        'n_plus_one' => 10,        // Duplicate queries to trigger N+1 alert
+        'slow_query_ms' => 300,    // Query duration threshold (ms)
+        'slow_request_ms' => 1000, // Request duration threshold (ms)
+        'memory_mb' => 128,        // Memory usage threshold (MB)
+        'query_count' => 50,       // Total query count warning
     ],
 
     // Performance grading scale (duration in ms)
@@ -98,89 +136,27 @@ return [
         'D' => 3000,  // <= 3000ms
         // Everything above = F
     ],
-
-    'dashboard' => [
-        'enabled' => true,
-        'path' => 'performance-guard',
-        'middleware' => ['web'],
-        'auth' => true,              // Require authentication
-        'gate' => 'viewPerformanceGuard', // Authorization gate
-        'allowed_ips' => [],          // IP whitelist (empty = disabled)
-        'allowed_emails' => [],       // Email whitelist (empty = disabled)
-    ],
-
-    'notifications' => [
-        'enabled' => false,
-        'channels' => [
-            'slack' => [
-                'enabled' => false,
-                'webhook_url' => env('PERFORMANCE_GUARD_SLACK_WEBHOOK'),
-            ],
-            'email' => [
-                'enabled' => false,
-                'recipients' => [],
-            ],
-            'telegram' => [
-                'enabled' => false,
-                'bot_token' => env('PERFORMANCE_GUARD_TELEGRAM_TOKEN'),
-                'chat_id' => env('PERFORMANCE_GUARD_TELEGRAM_CHAT_ID'),
-            ],
-        ],
-        'notify_on' => [
-            'n_plus_one' => true,
-            'slow_query' => true,
-            'slow_request' => true,
-            'high_memory' => true,
-            'grade_f' => true,
-        ],
-        'cooldown_minutes' => 15, // Prevent alert spam
-    ],
-
-    'storage' => [
-        'connection' => null,          // Use default DB connection
-        'retention_days' => 30,        // Auto-cleanup threshold
-        'async' => true,               // Store via queue
-        'queue' => 'default',          // Queue name
-    ],
-
-    'privacy' => [
-        'store_ip' => true,            // Store client IP addresses
-        'redact_bindings' => true,     // Redact sensitive query values
-        'redact_patterns' => [         // Patterns to trigger redaction
-            '/password/i',
-            '/secret/i',
-            '/token/i',
-            '/api_key/i',
-            '/credit_card/i',
-            '/ssn/i',
-        ],
-        'exclude_paths' => [           // Never monitor these paths
-            '_debugbar/*',
-            'telescope/*',
-            'horizon/*',
-        ],
-    ],
-
-    'ignored_routes' => [
-        'health',
-        'livewire/*',
-    ],
 ];
 ```
 
+See the [full config file](config/performance-guard.php) for all options including dashboard, notifications, storage, and privacy settings.
+
 ## Dashboard
 
-The built-in dashboard is available at `/performance-guard` (configurable) and shows:
+The built-in dashboard is available at `/performance-guard` and includes four views:
 
-- **Overview** - Total requests, average duration, query counts, memory usage, grade distribution, with trend indicators showing improvement/regression vs. previous period
-- **N+1 Issues** - All requests where N+1 patterns were detected
-- **Slow Queries** - All requests containing slow database queries
-- **Routes** - Per-route performance aggregation showing avg duration, avg queries, avg memory, worst grade, and issue counts
-- **Period Filtering** - View data for last 1 hour, 24 hours, 7 days, or 30 days
+| View | What it shows |
+|------|--------------|
+| **Overview** | Total requests, avg duration, query counts, memory, grades with trend indicators |
+| **N+1 Issues** | All requests where duplicate query patterns were detected |
+| **Slow Queries** | All requests containing slow database queries |
+| **Routes** | Per-route aggregation: avg duration, avg queries, memory, worst grade |
+
+Period filtering is available for 1 hour, 24 hours, 7 days, or 30 days.
 
 ### Dashboard Access Control
 
-By default, the dashboard requires a Gate authorization check. Define the gate in your `AuthServiceProvider`:
+By default, the dashboard requires authorization. Define the gate in your `AuthServiceProvider`:
 
 ```php
 use Illuminate\Support\Facades\Gate;
@@ -192,12 +168,11 @@ Gate::define('viewPerformanceGuard', function ($user) {
 });
 ```
 
-You can also restrict access by IP or email whitelist:
+You can also restrict by IP or email whitelist:
 
 ```php
 'dashboard' => [
     'auth' => true,
-    'gate' => 'viewPerformanceGuard',
     'allowed_ips' => ['127.0.0.1', '10.0.0.1'],
     'allowed_emails' => ['admin@example.com'],
 ],
@@ -207,17 +182,21 @@ Set `auth` to `false` for open access (not recommended in production).
 
 ## API Endpoints
 
-All dashboard data is available via JSON:
+All dashboard data is available as JSON:
 
-- `GET /performance-guard/api` - Overview stats with grade distribution
-- `GET /performance-guard/api/{uuid}` - Single record with all queries
-- `GET /performance-guard/n-plus-one` - N+1 issues (accepts JSON, paginated)
-- `GET /performance-guard/slow-queries` - Slow query records (accepts JSON, paginated)
-- `GET /performance-guard/routes` - Route-level aggregated performance (accepts JSON, paginated)
+| Endpoint | Description |
+|----------|-------------|
+| `GET /performance-guard/api` | Overview stats with grade distribution |
+| `GET /performance-guard/api/{uuid}` | Single record with all recorded queries |
+| `GET /performance-guard/n-plus-one` | N+1 issues (paginated) |
+| `GET /performance-guard/slow-queries` | Slow query records (paginated) |
+| `GET /performance-guard/routes` | Route-level aggregated stats (paginated) |
+
+All endpoints accept a `?period=` parameter (`1h`, `24h`, `7d`, `30d`).
 
 ## Notifications
 
-Enable alerts to get notified when performance issues occur.
+Get alerted when performance issues occur.
 
 ### Slack
 
@@ -234,7 +213,7 @@ PERFORMANCE_GUARD_TELEGRAM_TOKEN=123456:ABC-DEF...
 PERFORMANCE_GUARD_TELEGRAM_CHAT_ID=-1001234567890
 ```
 
-To get your Telegram bot token, message [@BotFather](https://t.me/BotFather). To get your chat ID, add the bot to a group and check `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+To get your bot token, message [@BotFather](https://t.me/BotFather). To get your chat ID, add the bot to a group and check `https://api.telegram.org/bot<TOKEN>/getUpdates`.
 
 ### Email
 
@@ -250,25 +229,44 @@ To get your Telegram bot token, message [@BotFather](https://t.me/BotFather). To
 ],
 ```
 
-### Notification Types
+### Alert Types
 
-- N+1 queries detected
-- Slow queries detected
-- Slow requests (exceeding threshold)
-- High memory usage (exceeding threshold)
-- Grade F requests
+| Alert | Trigger |
+|-------|---------|
+| N+1 Queries | Duplicate query pattern detected |
+| Slow Queries | Query exceeds duration threshold |
+| Slow Request | Request exceeds duration threshold |
+| High Memory | Memory usage exceeds threshold |
+| Grade F | Request received the lowest grade |
 
-A cooldown period (default: 15 minutes) prevents alert spam for the same issue on the same URI.
+A cooldown period (default: 15 minutes) prevents alert spam for the same issue.
 
-## Cleanup
+## Artisan Commands
 
-Remove old performance records:
+### Status
+
+Get a performance overview in your terminal:
+
+```bash
+php artisan performance-guard:status
+
+# Different time periods
+php artisan performance-guard:status --period=1h
+php artisan performance-guard:status --period=7d
+php artisan performance-guard:status --period=30d
+```
+
+Shows requests, avg duration, queries, memory, N+1 count, grade distribution, and the 5 slowest routes -- all with trend indicators.
+
+### Cleanup
+
+Remove old records to keep your database lean:
 
 ```bash
 # Use configured retention (default: 30 days)
 php artisan performance-guard:cleanup
 
-# Custom retention period
+# Custom retention
 php artisan performance-guard:cleanup --days=7
 
 # Skip confirmation
@@ -291,27 +289,9 @@ php artisan performance-guard:cleanup --force
 $schedule->command('performance-guard:cleanup --force')->daily();
 ```
 
-## Status Command
-
-Get a quick performance overview from the terminal:
-
-```bash
-php artisan performance-guard:status
-```
-
-Shows total requests, avg duration, avg queries, memory usage, N+1 count, slow query count, grade distribution, and the 5 slowest routes — all with trend indicators comparing against the previous period.
-
-```bash
-# View different time periods
-php artisan performance-guard:status --period=1h
-php artisan performance-guard:status --period=24h
-php artisan performance-guard:status --period=7d
-php artisan performance-guard:status --period=30d
-```
-
 ## Production Deployment
 
-Recommended `.env` settings for production:
+Recommended `.env` settings:
 
 ```env
 PERFORMANCE_GUARD_ENABLED=true
@@ -321,16 +301,16 @@ PERFORMANCE_GUARD_QUEUE=performance
 PERFORMANCE_GUARD_RETENTION_DAYS=14
 ```
 
-| Setting | Recommendation | Why |
-| --- | --- | --- |
-| `SAMPLING_RATE=0.1` | Monitor 10% of requests | Reduces overhead while still catching patterns |
-| `ASYNC=true` | Store via queue (default) | Recording never blocks the HTTP response |
-| `QUEUE=performance` | Dedicated queue | Prevents monitoring jobs from competing with business logic |
-| `RETENTION_DAYS=14` | 2 weeks | Keeps database size manageable |
+| Setting | Value | Why |
+|---------|-------|-----|
+| `SAMPLING_RATE` | `0.1` | Monitor 10% of requests -- reduces overhead while catching patterns |
+| `ASYNC` | `true` | Recording never blocks the HTTP response |
+| `QUEUE` | `performance` | Dedicated queue prevents competition with business jobs |
+| `RETENTION_DAYS` | `14` | Keeps database size manageable |
 
-### Disabling in emergencies
+### Emergency Kill Switch
 
-If you suspect the package is causing issues, disable it instantly without a deploy:
+Disable instantly without a deploy:
 
 ```env
 PERFORMANCE_GUARD_ENABLED=false
@@ -339,12 +319,12 @@ PERFORMANCE_GUARD_ENABLED=false
 Or at runtime:
 
 ```php
+use Zufarmarwah\PerformanceGuard\Facades\PerformanceGuard;
+
 PerformanceGuard::disable();
 ```
 
 ## Facade
-
-Use the `PerformanceGuard` facade for programmatic access:
 
 ```php
 use Zufarmarwah\PerformanceGuard\Facades\PerformanceGuard;
@@ -355,11 +335,11 @@ $stats = PerformanceGuard::getStats('24h');
 // Get grade distribution
 $grades = PerformanceGuard::getGradeDistribution('7d');
 
-// Enable/disable monitoring at runtime
-PerformanceGuard::disable();
+// Toggle monitoring
 PerformanceGuard::enable();
+PerformanceGuard::disable();
 
-// Check if monitoring is active
+// Check status
 if (PerformanceGuard::isEnabled()) {
     // ...
 }
@@ -367,21 +347,46 @@ if (PerformanceGuard::isEnabled()) {
 
 ## How It Works
 
+```
+Request --> Middleware --> QueryListener (DB::listen)
+                              |
+                        Response sent
+                              |
+                  NPlusOneAnalyzer (detects duplicates)
+                  SlowQueryAnalyzer (finds slow queries)
+                  PerformanceScorer (grades A-F)
+                              |
+                  StorePerformanceRecordJob (queued)
+                              |
+                  NotificationDispatcher (if configured)
+```
+
 1. The `performance-guard` middleware wraps each request
 2. A `QueryListener` captures every SQL query via `DB::listen()`
-3. After the response is sent:
-   - `NPlusOneAnalyzer` detects duplicate query patterns
-   - `SlowQueryAnalyzer` finds queries exceeding the threshold
-   - `PerformanceScorer` grades the request (A-F) based on duration
-4. Results are stored asynchronously via a queued job (with DB transaction and bulk insert)
-5. Notifications are dispatched if configured (with cooldown to prevent spam)
-6. File paths are stripped of base path to prevent server directory disclosure
+3. After the response, analyzers process the captured data
+4. Results are stored asynchronously via a queued job
+5. Notifications are dispatched if thresholds are exceeded
+6. Sensitive data is automatically redacted before storage
+
+## Octane Support
+
+Performance Guard is compatible with Laravel Octane. The `QueryListener` state is properly reset between requests to prevent data leaking across long-lived worker processes.
 
 ## Testing
 
 ```bash
 composer test
 ```
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Write tests for your changes
+4. Ensure all tests pass (`composer test`)
+5. Submit a pull request
 
 ## License
 
