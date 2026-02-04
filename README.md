@@ -54,9 +54,27 @@ Stats cards with trend indicators, grade distribution, and recent requests table
 
 ### Route Performance
 
-Per-route aggregation showing avg duration, queries, memory, and worst grade.
+Per-route aggregation with controller names, impact scoring, N+1/slow query issue flags, and CSV export.
 
-![Route Performance](docs/screenshots/routes.png)
+![Route Performance](docs/screenshots/routes-impact-scoring.jpg)
+
+### Request Detail -- N+1 Detection
+
+Click any request to see the full query breakdown. Duplicate query patterns are grouped with count badges, total duration, and eager-loading fix suggestions.
+
+![Request Detail - N+1 Detection](docs/screenshots/request-detail-n-plus-one.jpg)
+
+### Request Detail -- Controller & Source Tracing
+
+Each request shows the controller, action, user ID, IP, and source file:line for every query -- making it easy to trace exactly where queries originate.
+
+![Request Detail - Controller Info](docs/screenshots/request-detail-queries.jpg)
+
+### Request Detail -- Clean Request
+
+Requests with no issues show a clean view with zero queries and status code.
+
+![Request Detail - Clean](docs/screenshots/request-detail-clean.jpg)
 
 ## Requirements
 
