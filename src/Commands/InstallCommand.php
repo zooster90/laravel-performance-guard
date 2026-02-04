@@ -43,6 +43,10 @@ class InstallCommand extends Command
         $this->newLine();
         $this->line('  3. For production, set <fg=yellow>PERFORMANCE_GUARD_ASYNC=true</> in your .env');
         $this->newLine();
+        $this->line('  4. Schedule cleanup to prevent database bloat:');
+        $this->newLine();
+        $this->line("     <fg=gray>\$schedule->command('performance-guard:cleanup --force')->daily();</>");
+        $this->newLine();
 
         return self::SUCCESS;
     }

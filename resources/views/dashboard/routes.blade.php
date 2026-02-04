@@ -19,7 +19,7 @@
 </div>
 
 <div class="table-container">
-    <h2>Route Performance (sorted by avg duration)</h2>
+    <h2>Route Performance (sorted by impact: requests &times; avg duration)</h2>
     @if($routes->isEmpty())
         <div class="empty-state">
             <p>No route data available for this period.</p>
@@ -34,6 +34,7 @@
                     <th>Avg Duration</th>
                     <th>Avg Queries</th>
                     <th>Avg Memory</th>
+                    <th>Impact</th>
                     <th>Worst Grade</th>
                     <th>Issues</th>
                 </tr>
@@ -49,6 +50,7 @@
                         </td>
                         <td>{{ number_format($route->avg_queries, 0) }}</td>
                         <td>{{ number_format($route->avg_memory, 1) }}MB</td>
+                        <td style="color: {{ $route->impact_score > 10000 ? '#f87171' : ($route->impact_score > 5000 ? '#fbbf24' : '#94a3b8') }};">{{ number_format($route->impact_score, 0) }}</td>
                         <td><span class="badge badge-{{ strtolower($route->worst_grade) }}">{{ $route->worst_grade }}</span></td>
                         <td>
                             @if($route->n_plus_one_hits > 0)

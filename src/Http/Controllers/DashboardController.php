@@ -209,10 +209,11 @@ class DashboardController extends Controller
                 DB::raw('ROUND(AVG(memory_mb), 1) as avg_memory'),
                 DB::raw('MAX(grade) as worst_grade'),
                 DB::raw('SUM(CASE WHEN has_n_plus_one THEN 1 ELSE 0 END) as n_plus_one_hits'),
-                DB::raw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_hits')
+                DB::raw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_hits'),
+                DB::raw('ROUND(COUNT(*) * AVG(duration_ms), 0) as impact_score')
             )
             ->groupBy('method', 'uri')
-            ->orderByDesc(DB::raw('AVG(duration_ms)'))
+            ->orderByDesc(DB::raw('COUNT(*) * AVG(duration_ms)'))
             ->paginate($perPage, ['*'], 'page', $page);
     }
 

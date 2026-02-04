@@ -96,22 +96,30 @@ class StatusCommand extends Command
 
         if (count($slowestRoutes) > 0) {
             $this->newLine();
-            $this->line('  <fg=white;options=bold>Slowest Routes:</>');
+            $this->line('  <fg=white;options=bold>Highest Impact Routes:</> <fg=gray>(sorted by requests x avg duration)</>');
 
             foreach ($slowestRoutes as $route) {
                 $this->line(sprintf(
-                    '    <fg=%s>%s</> %s %s  <fg=gray>(%s avg, %s queries, %sx)</>',
+                    '    <fg=%s>%s</> %s %s  <fg=gray>(%sx, %sq, impact: %s)</>',
                     $route->avg_duration > 1000 ? 'red' : ($route->avg_duration > 500 ? 'yellow' : 'green'),
                     str_pad($route->method, 6),
                     str_pad(substr($route->uri, 0, 35), 35),
                     str_pad(number_format($route->avg_duration, 0) . 'ms', 8),
-                    number_format($route->avg_queries, 0) . 'q',
-                    $route->grade,
-                    $route->request_count
+                    $route->request_count,
+                    number_format($route->avg_queries, 0),
+                    number_format((float) $route->impact_score, 0)
                 ));
             }
         }
 
+        $totalRecords = PerformanceRecord::count();
+
+        $this->newLine();
+        $this->line(sprintf(
+            '  <fg=gray>Storage: %s records in database</> %s',
+            number_format($totalRecords),
+            $totalRecords > 100000 ? '<fg=yellow>(consider running performance-guard:cleanup)</>' : ''
+        ));
         $this->newLine();
 
         return self::SUCCESS;
@@ -183,10 +191,11 @@ class StatusCommand extends Command
                 DB::raw('COUNT(*) as request_count'),
                 DB::raw('ROUND(AVG(duration_ms), 0) as avg_duration'),
                 DB::raw('ROUND(AVG(query_count), 0) as avg_queries'),
-                DB::raw('MAX(grade) as grade')
+                DB::raw('MAX(grade) as grade'),
+                DB::raw('ROUND(COUNT(*) * AVG(duration_ms), 0) as impact_score')
             )
             ->groupBy('method', 'uri')
-            ->orderByDesc(DB::raw('AVG(duration_ms)'))
+            ->orderByDesc(DB::raw('COUNT(*) * AVG(duration_ms)'))
             ->limit($limit)
             ->get()
             ->all();
