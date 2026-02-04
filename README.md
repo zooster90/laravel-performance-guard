@@ -43,23 +43,17 @@ Most performance issues in Laravel apps go unnoticed until users complain. N+1 q
 
 ## Screenshots
 
-<!-- Replace these with actual screenshots from your app -->
+### Dashboard Overview
 
-> **Dashboard Overview** -- stats cards with trend indicators, grade distribution, and recent requests table
+Stats cards with trend indicators, grade distribution, and recent requests table.
 
 ![Dashboard Overview](docs/screenshots/dashboard-overview.png)
 
-> **N+1 Detection** -- flagged requests with duplicate query patterns
+### Route Performance
 
-![N+1 Detection](docs/screenshots/n-plus-one.png)
-
-> **Route Performance** -- per-route aggregation showing avg duration, queries, and grades
+Per-route aggregation showing avg duration, queries, memory, and worst grade.
 
 ![Route Performance](docs/screenshots/routes.png)
-
-> **Artisan Status** -- terminal-based performance overview
-
-![Artisan Status](docs/screenshots/artisan-status.png)
 
 ## Requirements
 
