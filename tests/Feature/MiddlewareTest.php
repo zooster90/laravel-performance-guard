@@ -131,3 +131,39 @@ it('resets query listener on exception (Octane safe)', function () {
     expect($listener->getQueries())->toBeEmpty();
     expect($listener->isListening())->toBeFalse();
 });
+
+it('skips recording for redirect responses', function () {
+    Queue::fake();
+    config(['performance-guard.ignore_status_codes' => [301, 302, 304]]);
+
+    $middleware = app(PerformanceMonitoringMiddleware::class);
+    $request = Request::create('/api/users', 'GET');
+
+    $middleware->handle($request, function () {
+        return new Response('', 302, ['Location' => '/login']);
+    });
+
+    Queue::assertNotPushed(StorePerformanceRecordJob::class);
+});
+
+it('auto-excludes performance-guard dashboard routes', function () {
+    Queue::fake();
+    config(['performance-guard.dashboard.path' => 'performance-guard']);
+
+    $request = Request::create('/performance-guard', 'GET');
+
+    callMiddleware($request);
+
+    Queue::assertNotPushed(StorePerformanceRecordJob::class);
+});
+
+it('auto-excludes performance-guard sub-routes', function () {
+    Queue::fake();
+    config(['performance-guard.dashboard.path' => 'performance-guard']);
+
+    $request = Request::create('/performance-guard/api', 'GET');
+
+    callMiddleware($request);
+
+    Queue::assertNotPushed(StorePerformanceRecordJob::class);
+});

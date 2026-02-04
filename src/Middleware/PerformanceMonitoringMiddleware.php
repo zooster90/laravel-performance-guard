@@ -92,11 +92,28 @@ class PerformanceMonitoringMiddleware
             }
         }
 
+        $dashboardPath = config('performance-guard.dashboard.path', 'performance-guard');
+
+        if ($request->is($dashboardPath) || $request->is($dashboardPath . '/*')) {
+            return false;
+        }
+
         return true;
+    }
+
+    private function shouldSkipStatusCode(int $statusCode): bool
+    {
+        $ignoredCodes = config('performance-guard.ignore_status_codes', []);
+
+        return in_array($statusCode, $ignoredCodes, true);
     }
 
     private function recordPerformance(Request $request, Response $response, float $durationMs, float $memoryMb): void
     {
+        if ($this->shouldSkipStatusCode($response->getStatusCode())) {
+            return;
+        }
+
         $queries = $this->queryListener->getQueries();
         $slowThreshold = (float) config('performance-guard.thresholds.slow_query_ms', 300);
         $nPlusOneThreshold = (int) config('performance-guard.thresholds.n_plus_one', 10);

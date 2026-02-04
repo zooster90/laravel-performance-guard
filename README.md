@@ -26,9 +26,12 @@ Most performance issues in Laravel apps go unnoticed until users complain. N+1 q
 
 ## Features
 
-- **N+1 Query Detection** -- detects duplicate query patterns and suggests eager loading fixes
+- **N+1 Query Detection** -- detects duplicate query patterns, ignores framework tables (cache, sessions), and distinguishes eager-loading vs aggregate query suggestions
 - **Slow Query Monitoring** -- identifies slow queries with optimization suggestions
 - **Request Detail View** -- click any request to see all queries, duplicate patterns, and fix suggestions
+- **Developer Overlay** -- floating pill on your website showing real-time queries, duration, and N+1 issues while you code (like Debugbar, but lighter)
+- **Web Vitals** -- capture real user metrics (LCP, CLS, INP) from the browser and display them alongside server metrics
+- **CI/CD Performance Budgets** -- `performance-guard:check` command fails your build if routes exceed duration/query thresholds or have N+1 issues
 - **Performance Grading** -- grades every request A-F based on response time
 - **Built-in Dashboard** -- dark-themed dashboard with auto-refresh to visualize performance metrics
 - **Impact Scoring** -- routes sorted by impact (requests x avg duration) to prioritize what matters most
@@ -40,6 +43,7 @@ Most performance issues in Laravel apps go unnoticed until users complain. N+1 q
 - **Auto Cleanup** -- artisan command to purge old records with configurable retention
 - **High Memory Detection** -- alerts when requests exceed memory thresholds
 - **Route Aggregation** -- per-route performance breakdown with controller names and impact scoring
+- **Smart Filtering** -- auto-excludes redirect responses, dashboard self-monitoring, and framework table queries
 - **Trend Comparison** -- period-over-period comparison showing improvement or regression
 - **Artisan Status Command** -- quick terminal overview of performance health
 - **Octane Compatible** -- safe for long-running processes with proper state isolation
@@ -242,6 +246,81 @@ You can also restrict by IP or email whitelist:
 
 Set `auth` to `false` for open access (not recommended in production).
 
+## Developer Overlay
+
+A floating pill in the corner of your website that shows **real-time performance metrics** while you develop -- no tab switching needed.
+
+```env
+PERFORMANCE_GUARD_OVERLAY=true
+```
+
+Then add the overlay middleware **after** the monitoring middleware:
+
+```php
+// Laravel 11+ (bootstrap/app.php)
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->appendToGroup('web', [
+        \Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware::class,
+        \Zufarmarwah\PerformanceGuard\Middleware\PerformanceOverlayMiddleware::class,
+    ]);
+})
+```
+
+The overlay shows:
+
+- Performance grade badge (A-F)
+- Query count and response duration
+- N+1 and slow query warnings
+- Click to expand: full query list, suggestions, and link to dashboard
+
+### Web Vitals
+
+Enable browser-side metrics (LCP, CLS, INP) alongside the overlay:
+
+```env
+PERFORMANCE_GUARD_WEB_VITALS=true
+```
+
+Web Vitals are captured via the Performance Observer API and sent to the dashboard automatically. No external dependencies required.
+
+## CI/CD Performance Budgets
+
+Stop slow code from reaching production. The `performance-guard:check` command validates recorded performance data against budgets and returns exit code 1 on failure.
+
+```bash
+# Check all routes against default budgets
+php artisan performance-guard:check
+
+# Custom budgets
+php artisan performance-guard:check --max-duration=500 --max-queries=30
+
+# Check a specific route
+php artisan performance-guard:check --route=/api/bookings
+
+# Fail if any N+1 issues
+php artisan performance-guard:check --fail-on-n-plus-one
+```
+
+### GitHub Actions Example
+
+```yaml
+- name: Run test suite
+  run: php artisan test
+
+- name: Check performance budgets
+  run: php artisan performance-guard:check --period=1h --fail-on-n-plus-one
+```
+
+Configure defaults in `config/performance-guard.php`:
+
+```php
+'ci' => [
+    'max_duration_ms' => 500,
+    'max_queries' => 30,
+    'fail_on_n_plus_one' => true,
+],
+```
+
 ## API Endpoints
 
 All dashboard data is available as JSON:
@@ -255,6 +334,8 @@ All dashboard data is available as JSON:
 | `GET /performance-guard/slow-queries` | Slow query records (paginated) |
 | `GET /performance-guard/routes` | Route-level aggregated stats (paginated) |
 | `GET /performance-guard/routes/export` | Download route data as CSV |
+| `POST /performance-guard/api/vitals` | Store browser Web Vitals (LCP, CLS, INP) |
+| `GET /performance-guard/api/vitals` | Aggregate Web Vitals per URL |
 
 All endpoints accept a `?period=` parameter (`1h`, `24h`, `7d`, `30d`).
 
@@ -321,6 +402,18 @@ php artisan performance-guard:status --period=30d
 ```
 
 Shows requests, avg duration, queries, memory, N+1 count, grade distribution, and the 5 slowest routes -- all with trend indicators.
+
+### Check (CI/CD)
+
+Validate performance against budgets:
+
+```bash
+php artisan performance-guard:check
+php artisan performance-guard:check --max-duration=500 --max-queries=30 --fail-on-n-plus-one
+php artisan performance-guard:check --route=/api/bookings --period=1h
+```
+
+Returns exit code 0 (pass) or 1 (fail). See [CI/CD Performance Budgets](#cicd-performance-budgets) for setup.
 
 ### Cleanup
 

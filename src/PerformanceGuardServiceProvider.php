@@ -10,11 +10,13 @@ use Illuminate\Support\ServiceProvider;
 use Zufarmarwah\PerformanceGuard\Analyzers\NPlusOneAnalyzer;
 use Zufarmarwah\PerformanceGuard\Analyzers\PerformanceScorer;
 use Zufarmarwah\PerformanceGuard\Analyzers\SlowQueryAnalyzer;
+use Zufarmarwah\PerformanceGuard\Commands\CheckCommand;
 use Zufarmarwah\PerformanceGuard\Commands\CleanupCommand;
 use Zufarmarwah\PerformanceGuard\Commands\InstallCommand;
 use Zufarmarwah\PerformanceGuard\Commands\StatusCommand;
 use Zufarmarwah\PerformanceGuard\Listeners\QueryListener;
 use Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware;
+use Zufarmarwah\PerformanceGuard\Middleware\PerformanceOverlayMiddleware;
 use Zufarmarwah\PerformanceGuard\Notifications\NotificationDispatcher;
 
 class PerformanceGuardServiceProvider extends ServiceProvider
@@ -58,6 +60,7 @@ class PerformanceGuardServiceProvider extends ServiceProvider
     {
         $router = $this->app->make('router');
         $router->aliasMiddleware('performance-guard', PerformanceMonitoringMiddleware::class);
+        $router->aliasMiddleware('performance-guard-overlay', PerformanceOverlayMiddleware::class);
     }
 
     private function registerQueryListener(): void
@@ -77,6 +80,7 @@ class PerformanceGuardServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
+                CheckCommand::class,
                 CleanupCommand::class,
                 InstallCommand::class,
                 StatusCommand::class,

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Zufarmarwah\PerformanceGuard\Models\PerformanceRecord;
+use Zufarmarwah\PerformanceGuard\Models\PerformanceVital;
 
 class DashboardController extends Controller
 {
@@ -264,6 +265,67 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function storeVitals(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => 'required|string|max:2048',
+            'lcp_ms' => 'nullable|numeric|min:0',
+            'cls_score' => 'nullable|numeric|min:0',
+            'inp_ms' => 'nullable|numeric|min:0',
+        ]);
+
+        PerformanceVital::create([
+            'url' => $validated['url'],
+            'lcp_ms' => $validated['lcp_ms'] ?? null,
+            'cls_score' => $validated['cls_score'] ?? null,
+            'inp_ms' => $validated['inp_ms'] ?? null,
+            'created_at' => now(),
+        ]);
+
+        return new JsonResponse(['success' => true], 201);
+    }
+
+    public function vitals(Request $request): JsonResponse
+    {
+        $period = $request->get('period', '24h');
+        $since = $this->resolveSince($period);
+
+        $vitals = PerformanceVital::query()
+            ->where('created_at', '>=', $since)
+            ->select(
+                'url',
+                DB::raw('COUNT(*) as sample_count'),
+                DB::raw('ROUND(AVG(lcp_ms), 0) as avg_lcp'),
+                DB::raw('ROUND(AVG(cls_score), 3) as avg_cls'),
+                DB::raw('ROUND(AVG(inp_ms), 0) as avg_inp')
+            )
+            ->groupBy('url')
+            ->orderByDesc(DB::raw('COUNT(*)'))
+            ->limit(50)
+            ->get();
+
+        $overall = PerformanceVital::query()
+            ->where('created_at', '>=', $since)
+            ->selectRaw('COUNT(*) as total_samples')
+            ->selectRaw('ROUND(AVG(lcp_ms), 0) as avg_lcp')
+            ->selectRaw('ROUND(AVG(cls_score), 3) as avg_cls')
+            ->selectRaw('ROUND(AVG(inp_ms), 0) as avg_inp')
+            ->first();
+
+        return new JsonResponse([
+            'success' => true,
+            'data' => [
+                'overall' => [
+                    'total_samples' => (int) ($overall->total_samples ?? 0),
+                    'avg_lcp' => (float) ($overall->avg_lcp ?? 0),
+                    'avg_cls' => (float) ($overall->avg_cls ?? 0),
+                    'avg_inp' => (float) ($overall->avg_inp ?? 0),
+                ],
+                'by_url' => $vitals,
+            ],
+        ]);
+    }
+
     private function generateSuggestion(string $sql, int $count, ?string $file, ?int $line): string
     {
         $table = null;
@@ -274,6 +336,16 @@ class DashboardController extends Controller
 
         if ($table === null) {
             $suggestion = sprintf('Duplicate query executed %d times. Consider eager loading or caching.', $count);
+
+            return $this->appendLocation($suggestion, $file, $line);
+        }
+
+        if ($this->isAggregateQuery($sql)) {
+            $suggestion = sprintf(
+                'Aggregate query on "%s" executed %d times. Consider using a subquery, DB::raw(), or precomputing these values instead of querying in a loop.',
+                $table,
+                $count
+            );
 
             return $this->appendLocation($suggestion, $file, $line);
         }
@@ -315,6 +387,12 @@ class DashboardController extends Controller
         }
 
         return $this->appendLocation($suggestion, $file, $line);
+    }
+
+    private function isAggregateQuery(string $sql): bool
+    {
+        return (bool) preg_match('/\b(sum|count|avg|min|max)\s*\(/i', $sql)
+            && (bool) preg_match('/\bas\s+aggregate\b/i', $sql);
     }
 
     private function appendLocation(string $suggestion, ?string $file, ?int $line): string

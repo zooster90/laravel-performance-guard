@@ -44,6 +44,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Ignored Tables
+    |--------------------------------------------------------------------------
+    |
+    | Tables that should be excluded from N+1 duplicate detection. Framework
+    | tables like cache and sessions generate many queries that are not actual
+    | N+1 issues and cannot be solved with eager loading.
+    |
+    */
+    'ignored_tables' => [
+        'cache',
+        'cache_locks',
+        'sessions',
+        'jobs',
+        'failed_jobs',
+        'migrations',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ignored Status Codes
+    |--------------------------------------------------------------------------
+    |
+    | HTTP status codes that should not be recorded. Redirects (3xx) typically
+    | execute no meaningful queries and add noise to the dashboard.
+    |
+    */
+    'ignore_status_codes' => [
+        301,
+        302,
+        304,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Performance Grading
     |--------------------------------------------------------------------------
     |
@@ -167,6 +201,37 @@ return [
     'ignored_routes' => [
         'health',
         'livewire/*',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Developer Overlay
+    |--------------------------------------------------------------------------
+    |
+    | A floating pill in the corner of your website that shows real-time
+    | performance metrics (queries, duration, N+1 issues) while you develop.
+    | Inspired by Laravel Debugbar -- no tab switching needed.
+    |
+    */
+    'overlay' => [
+        'enabled' => env('PERFORMANCE_GUARD_OVERLAY', false),
+        'position' => 'bottom-right', // bottom-right, bottom-left
+        'web_vitals' => env('PERFORMANCE_GUARD_WEB_VITALS', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | CI / Performance Budgets
+    |--------------------------------------------------------------------------
+    |
+    | Default thresholds for the performance-guard:check command. If any route
+    | exceeds these budgets during CI, the command exits with code 1.
+    |
+    */
+    'ci' => [
+        'max_duration_ms' => env('PERFORMANCE_GUARD_CI_MAX_DURATION', 500),
+        'max_queries' => env('PERFORMANCE_GUARD_CI_MAX_QUERIES', 30),
+        'fail_on_n_plus_one' => env('PERFORMANCE_GUARD_CI_FAIL_N_PLUS_ONE', true),
     ],
 
 ];

@@ -117,3 +117,32 @@ it('includes file location in suggestions', function () {
     expect($result['suggestions'][0])->toContain('UserController.php');
     expect($result['suggestions'][0])->toContain('42');
 });
+
+it('ignores queries on configured ignored tables', function () {
+    config(['performance-guard.ignored_tables' => ['cache', 'sessions']]);
+
+    $queries = [
+        ['sql' => 'select * from "cache" where "key" in (?)', 'normalized' => 'select * from "cache" where "key" in (?)', 'duration' => 0.1, 'file' => null, 'line' => null],
+        ['sql' => 'select * from "cache" where "key" in (?)', 'normalized' => 'select * from "cache" where "key" in (?)', 'duration' => 0.1, 'file' => null, 'line' => null],
+        ['sql' => 'select * from "cache" where "key" in (?)', 'normalized' => 'select * from "cache" where "key" in (?)', 'duration' => 0.1, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeFalse();
+    expect($result['duplicates'])->toBeEmpty();
+});
+
+it('suggests subquery for aggregate queries', function () {
+    $queries = [
+        ['sql' => 'select sum("total_amount") as aggregate from "bookings" where "status" = ? and strftime(?, "created_at") = cast(? as text)', 'normalized' => 'select sum(?) as aggregate from "bookings" where "status" = ? and strftime(?, ?) = cast(? as text)', 'duration' => 0.2, 'file' => null, 'line' => null],
+        ['sql' => 'select sum("total_amount") as aggregate from "bookings" where "status" = ? and strftime(?, "created_at") = cast(? as text)', 'normalized' => 'select sum(?) as aggregate from "bookings" where "status" = ? and strftime(?, ?) = cast(? as text)', 'duration' => 0.2, 'file' => null, 'line' => null],
+    ];
+
+    $result = $this->analyzer->analyze($queries);
+
+    expect($result['hasNPlusOne'])->toBeTrue();
+    expect($result['suggestions'][0])->toContain('Aggregate query');
+    expect($result['suggestions'][0])->toContain('subquery');
+    expect($result['suggestions'][0])->not->toContain('eager load');
+});

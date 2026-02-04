@@ -21,4 +21,6 @@ Route::prefix($path)
         Route::get('/slow-queries', [DashboardController::class, 'slowQueries'])->name('performance-guard.slow-queries');
         Route::get('/routes', [DashboardController::class, 'routes'])->name('performance-guard.routes');
         Route::get('/routes/export', [DashboardController::class, 'exportRoutes'])->name('performance-guard.routes.export');
+        Route::post('/api/vitals', [DashboardController::class, 'storeVitals'])->name('performance-guard.vitals.store');
+        Route::get('/api/vitals', [DashboardController::class, 'vitals'])->name('performance-guard.vitals');
     });
