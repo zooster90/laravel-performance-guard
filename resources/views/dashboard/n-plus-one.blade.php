@@ -32,7 +32,7 @@
             </thead>
             <tbody>
                 @foreach($records as $record)
-                    <tr>
+                    <tr class="clickable" onclick="window.location='{{ route('performance-guard.request.show', $record->uuid) }}'">
                         <td><span class="method method-{{ strtolower($record->method) }}">{{ $record->method }}</span></td>
                         <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $record->uri }}</td>
                         <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 0.75rem;">
@@ -48,6 +48,18 @@
                 @endforeach
             </tbody>
         </table>
+
+        @if($records->hasPages())
+            <div style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+                @if($records->previousPageUrl())
+                    <a href="{{ $records->previousPageUrl() }}" style="color: #94a3b8; text-decoration: none;">&larr; Previous</a>
+                @endif
+                <span style="color: #64748b;">Page {{ $records->currentPage() }} of {{ $records->lastPage() }}</span>
+                @if($records->nextPageUrl())
+                    <a href="{{ $records->nextPageUrl() }}" style="color: #94a3b8; text-decoration: none;">Next &rarr;</a>
+                @endif
+            </div>
+        @endif
     @endif
 </div>
 @endsection

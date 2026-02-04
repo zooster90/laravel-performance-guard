@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance Guard</title>
+    @hasSection('auto-refresh')
+        @yield('auto-refresh')
+    @endif
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
@@ -40,6 +43,8 @@
         th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155; }
         td { padding: 0.75rem 1rem; font-size: 0.875rem; border-bottom: 1px solid #1e293b; }
         tr:hover td { background: #334155; }
+        tr.clickable { cursor: pointer; }
+        tr.clickable:hover td { background: #334155; }
         .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
         .badge-a { background: #064e3b; color: #34d399; }
         .badge-b { background: #0c4a6e; color: #38bdf8; }
@@ -55,6 +60,17 @@
         .method-put { color: #fbbf24; }
         .method-patch { color: #fb923c; }
         .method-delete { color: #f87171; }
+        .suggestion-card { padding: 1rem 1.25rem; border-bottom: 1px solid #334155; }
+        .suggestion-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .suggestion-text { font-size: 0.875rem; color: #e2e8f0; margin-bottom: 0.5rem; }
+        .suggestion-sql { font-family: monospace; font-size: 0.75rem; color: #94a3b8; background: #0f172a; padding: 0.5rem 0.75rem; border-radius: 0.375rem; word-break: break-all; }
+        .sql-code { font-family: monospace; font-size: 0.75rem; color: #94a3b8; word-break: break-all; }
+        .row-duplicate { border-left: 3px solid #f87171; }
+        .row-slow { border-left: 3px solid #fbbf24; }
+        .btn { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem; text-decoration: none; font-size: 0.75rem; transition: all 0.2s; border: 1px solid #334155; color: #94a3b8; background: transparent; }
+        .btn:hover { background: #334155; color: #f8fafc; }
+        .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .auto-refresh-badge { font-size: 0.625rem; color: #34d399; padding: 0.125rem 0.375rem; background: #064e3b; border-radius: 0.25rem; }
     </style>
 </head>
 <body>
