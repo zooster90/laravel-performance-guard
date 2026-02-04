@@ -21,6 +21,33 @@ it('blocks unauthenticated users when auth is enabled', function () {
     $response->assertStatus(403);
 });
 
+it('shows helpful setup page on 403', function () {
+    config([
+        'performance-guard.dashboard.auth' => true,
+        'performance-guard.dashboard.allowed_ips' => [],
+        'performance-guard.dashboard.allowed_emails' => [],
+    ]);
+
+    $response = $this->get('/performance-guard');
+
+    $response->assertStatus(403);
+    $response->assertSee('Setup Required');
+    $response->assertSee('viewPerformanceGuard');
+});
+
+it('returns json 403 when requesting json', function () {
+    config([
+        'performance-guard.dashboard.auth' => true,
+        'performance-guard.dashboard.allowed_ips' => [],
+        'performance-guard.dashboard.allowed_emails' => [],
+    ]);
+
+    $response = $this->getJson('/performance-guard');
+
+    $response->assertStatus(403);
+    $response->assertJsonFragment(['message' => 'Unauthorized. Define the "viewPerformanceGuard" gate or configure dashboard authorization.']);
+});
+
 it('allows access when auth is disabled', function () {
     config([
         'performance-guard.dashboard.auth' => false,

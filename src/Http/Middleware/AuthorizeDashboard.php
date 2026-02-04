@@ -14,10 +14,30 @@ class AuthorizeDashboard
     public function handle(Request $request, Closure $next): Response
     {
         if (! $this->isAuthorized($request)) {
-            abort(403, 'Unauthorized access to Performance Guard dashboard.');
+            return $this->unauthorizedResponse($request);
         }
 
         return $next($request);
+    }
+
+    private function unauthorizedResponse(Request $request): Response
+    {
+        if ($request->wantsJson()) {
+            return new \Illuminate\Http\JsonResponse([
+                'message' => 'Unauthorized. Define the "viewPerformanceGuard" gate or configure dashboard authorization.',
+            ], 403);
+        }
+
+        try {
+            return new \Illuminate\Http\Response(
+                view('performance-guard::errors.unauthorized', [
+                    'ip' => $request->ip(),
+                ])->render(),
+                403
+            );
+        } catch (\Throwable) {
+            abort(403, 'Unauthorized access to Performance Guard dashboard.');
+        }
     }
 
     private function isAuthorized(Request $request): bool

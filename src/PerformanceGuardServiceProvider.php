@@ -11,6 +11,7 @@ use Zufarmarwah\PerformanceGuard\Analyzers\NPlusOneAnalyzer;
 use Zufarmarwah\PerformanceGuard\Analyzers\PerformanceScorer;
 use Zufarmarwah\PerformanceGuard\Analyzers\SlowQueryAnalyzer;
 use Zufarmarwah\PerformanceGuard\Commands\CleanupCommand;
+use Zufarmarwah\PerformanceGuard\Commands\InstallCommand;
 use Zufarmarwah\PerformanceGuard\Commands\StatusCommand;
 use Zufarmarwah\PerformanceGuard\Listeners\QueryListener;
 use Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware;
@@ -77,6 +78,7 @@ class PerformanceGuardServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 CleanupCommand::class,
+                InstallCommand::class,
                 StatusCommand::class,
             ]);
         }

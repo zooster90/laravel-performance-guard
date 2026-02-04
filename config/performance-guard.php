@@ -126,7 +126,7 @@ return [
     'storage' => [
         'connection' => env('PERFORMANCE_GUARD_DB_CONNECTION', null),
         'retention_days' => env('PERFORMANCE_GUARD_RETENTION_DAYS', 30),
-        'async' => env('PERFORMANCE_GUARD_ASYNC', true),
+        'async' => env('PERFORMANCE_GUARD_ASYNC', false),
         'queue' => env('PERFORMANCE_GUARD_QUEUE', 'default'),
     ],
 

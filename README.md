@@ -73,34 +73,73 @@ Works with any database supported by Laravel:
 
 ## Installation
 
+> **Note:** The Composer package name is `zufarmarwah/laravel-performance-guard`.
+
 ```bash
 composer require zufarmarwah/laravel-performance-guard
 ```
 
-Publish the config and run migrations:
+Then run the install command (publishes config + runs migrations in one step):
+
+```bash
+php artisan performance-guard:install
+```
+
+<details>
+<summary>Or install manually</summary>
 
 ```bash
 php artisan vendor:publish --tag=performance-guard-config
 php artisan migrate
 ```
 
+</details>
+
 ## Quick Start
 
-Add the middleware to any route or group:
+### Laravel 11+ (bootstrap/app.php)
+
+To monitor **all web requests**, append the middleware globally:
 
 ```php
-// Monitor a group of routes
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->appendToGroup('web', \Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware::class);
+})
+```
+
+Or apply it to **specific routes** only:
+
+```php
 Route::middleware(['performance-guard'])->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/posts', [PostController::class, 'index']);
 });
+```
 
-// Monitor a single route
-Route::get('/dashboard', DashboardController::class)
-    ->middleware('performance-guard');
+### Laravel 10 (app/Http/Kernel.php)
+
+Add to a middleware group or use the alias on specific routes:
+
+```php
+// In Kernel.php -- monitor all web requests
+protected $middlewareGroups = [
+    'web' => [
+        // ...existing middleware
+        \Zufarmarwah\PerformanceGuard\Middleware\PerformanceMonitoringMiddleware::class,
+    ],
+];
+```
+
+```php
+// Or on specific routes
+Route::middleware(['performance-guard'])->group(function () {
+    // your routes
+});
 ```
 
 Visit `/performance-guard` in your browser. That's it.
+
+> **Tip:** By default, data is stored synchronously so you see results immediately. For production, set `PERFORMANCE_GUARD_ASYNC=true` in your `.env` to store via queue.
 
 ## Configuration
 
