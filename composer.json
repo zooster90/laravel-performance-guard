@@ -5,7 +5,7 @@
         "laravel",
         "performance",
         "monitoring",
-        "n+1",
+        "n-plus-one",
         "slow-queries",
         "profiling"
     ],
