@@ -1,5 +1,9 @@
 @extends('performance-guard::dashboard.layout')
 
+@section('auto-refresh')
+    <meta http-equiv="refresh" content="30">
+@endsection
+
 @section('content')
 <div class="header">
     <h1><span>Performance</span> Guard</h1>
@@ -11,11 +15,14 @@
     </div>
 </div>
 
-<div class="period-selector" style="margin-bottom: 1.5rem;">
-    @foreach(['1h' => '1 Hour', '24h' => '24 Hours', '7d' => '7 Days', '30d' => '30 Days'] as $key => $label)
-        <a href="{{ route('performance-guard.dashboard', ['period' => $key]) }}"
-           class="{{ $period === $key ? 'active' : '' }}">{{ $label }}</a>
-    @endforeach
+<div class="toolbar">
+    <div class="period-selector">
+        @foreach(['1h' => '1 Hour', '24h' => '24 Hours', '7d' => '7 Days', '30d' => '30 Days'] as $key => $label)
+            <a href="{{ route('performance-guard.dashboard', ['period' => $key]) }}"
+               class="{{ $period === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+    </div>
+    <span class="auto-refresh-badge">Auto-refresh 30s</span>
 </div>
 
 @php
@@ -102,7 +109,7 @@
             </thead>
             <tbody>
                 @foreach($records as $record)
-                    <tr>
+                    <tr class="clickable" onclick="window.location='{{ route('performance-guard.request.show', $record->uuid) }}'">
                         <td><span class="method method-{{ strtolower($record->method) }}">{{ $record->method }}</span></td>
                         <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $record->uri }}</td>
                         <td>{{ number_format($record->duration_ms, 0) }}ms</td>

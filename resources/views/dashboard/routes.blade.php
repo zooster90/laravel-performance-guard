@@ -11,11 +11,14 @@
     </div>
 </div>
 
-<div class="period-selector" style="margin-bottom: 1.5rem;">
-    @foreach(['1h' => '1 Hour', '24h' => '24 Hours', '7d' => '7 Days', '30d' => '30 Days'] as $key => $label)
-        <a href="{{ route('performance-guard.routes', ['period' => $key]) }}"
-           class="{{ $period === $key ? 'active' : '' }}">{{ $label }}</a>
-    @endforeach
+<div class="toolbar">
+    <div class="period-selector">
+        @foreach(['1h' => '1 Hour', '24h' => '24 Hours', '7d' => '7 Days', '30d' => '30 Days'] as $key => $label)
+            <a href="{{ route('performance-guard.routes', ['period' => $key]) }}"
+               class="{{ $period === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+    </div>
+    <a href="{{ route('performance-guard.routes.export', ['period' => $period]) }}" class="btn">Export CSV</a>
 </div>
 
 <div class="table-container">
@@ -30,6 +33,7 @@
                 <tr>
                     <th>Method</th>
                     <th>URI</th>
+                    <th>Controller</th>
                     <th>Requests</th>
                     <th>Avg Duration</th>
                     <th>Avg Queries</th>
@@ -43,7 +47,10 @@
                 @foreach($routes as $route)
                     <tr>
                         <td><span class="method method-{{ strtolower($route->method) }}">{{ $route->method }}</span></td>
-                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $route->uri }}</td>
+                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $route->uri }}</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-size: 0.75rem;">
+                            {{ $route->action ?? '-' }}
+                        </td>
                         <td>{{ number_format($route->request_count) }}</td>
                         <td class="{{ $route->avg_duration > 1000 ? 'danger' : ($route->avg_duration > 500 ? 'warning' : '') }}">
                             {{ number_format($route->avg_duration, 0) }}ms

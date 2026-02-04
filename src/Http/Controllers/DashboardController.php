@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Zufarmarwah\PerformanceGuard\Models\PerformanceRecord;
 
 class DashboardController extends Controller
@@ -84,6 +85,42 @@ class DashboardController extends Controller
         return new JsonResponse([
             'success' => true,
             'data' => $record,
+        ]);
+    }
+
+    public function showDetail(string $uuid)
+    {
+        $record = PerformanceRecord::where('uuid', $uuid)
+            ->with('queries')
+            ->firstOrFail();
+
+        $queries = $record->queries;
+
+        $duplicateGroups = $queries
+            ->where('is_duplicate', true)
+            ->groupBy('normalized_sql')
+            ->map(function ($group) {
+                $first = $group->first();
+
+                return [
+                    'normalized_sql' => $first->normalized_sql,
+                    'count' => $group->count(),
+                    'total_duration' => round($group->sum('duration_ms'), 2),
+                    'file' => $first->file,
+                    'line' => $first->line,
+                    'suggestion' => $this->generateSuggestion($first->sql, $group->count(), $first->file, $first->line),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+
+        $slowQueries = $queries->where('is_slow', true)->values();
+
+        return view('performance-guard::dashboard.show', [
+            'record' => $record,
+            'queries' => $queries,
+            'duplicateGroups' => $duplicateGroups,
+            'slowQueries' => $slowQueries,
         ]);
     }
 
@@ -171,6 +208,128 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function exportRoutes(Request $request): StreamedResponse
+    {
+        $period = $request->get('period', '24h');
+        $since = $this->resolveSince($period);
+
+        $routes = PerformanceRecord::query()
+            ->where('created_at', '>=', $since)
+            ->select(
+                'method',
+                'uri',
+                DB::raw('COUNT(*) as request_count'),
+                DB::raw('ROUND(AVG(duration_ms), 0) as avg_duration'),
+                DB::raw('ROUND(AVG(query_count), 0) as avg_queries'),
+                DB::raw('ROUND(AVG(memory_mb), 1) as avg_memory'),
+                DB::raw('MAX(grade) as worst_grade'),
+                DB::raw('SUM(CASE WHEN has_n_plus_one THEN 1 ELSE 0 END) as n_plus_one_hits'),
+                DB::raw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_hits'),
+                DB::raw('ROUND(COUNT(*) * AVG(duration_ms), 0) as impact_score')
+            )
+            ->groupBy('method', 'uri')
+            ->orderByDesc(DB::raw('COUNT(*) * AVG(duration_ms)'))
+            ->get();
+
+        $filename = 'performance-guard-routes-' . $period . '-' . now()->format('Y-m-d') . '.csv';
+
+        return new StreamedResponse(function () use ($routes) {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
+
+            fputcsv($handle, ['Method', 'URI', 'Requests', 'Avg Duration (ms)', 'Avg Queries', 'Avg Memory (MB)', 'Worst Grade', 'N+1 Hits', 'Slow Query Hits', 'Impact Score']);
+
+            foreach ($routes as $route) {
+                fputcsv($handle, [
+                    $route->method,
+                    $route->uri,
+                    $route->request_count,
+                    $route->avg_duration,
+                    $route->avg_queries,
+                    $route->avg_memory,
+                    $route->worst_grade,
+                    $route->n_plus_one_hits,
+                    $route->slow_query_hits,
+                    $route->impact_score,
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    private function generateSuggestion(string $sql, int $count, ?string $file, ?int $line): string
+    {
+        $table = null;
+
+        if (preg_match('/\bfrom\s+[`"]?(\w+)[`"]?/i', $sql, $matches)) {
+            $table = $matches[1];
+        }
+
+        if ($table === null) {
+            $suggestion = sprintf('Duplicate query executed %d times. Consider eager loading or caching.', $count);
+
+            return $this->appendLocation($suggestion, $file, $line);
+        }
+
+        $relationship = rtrim($table, 's');
+
+        if (str_ends_with($table, 'ies')) {
+            $relationship = substr($table, 0, -3) . 'y';
+        }
+
+        $parentModel = null;
+
+        if (preg_match('/where\s+[`"]?(\w+)_id[`"]?\s*=\s*(?:\?|\d+)/i', $sql, $parentMatch)) {
+            $parentTable = $parentMatch[1] . 's';
+            $singular = rtrim($parentTable, 's');
+
+            if (str_ends_with($parentTable, 'ies')) {
+                $singular = substr($parentTable, 0, -3) . 'y';
+            }
+
+            $parentModel = ucfirst($singular);
+        }
+
+        if ($parentModel !== null) {
+            $suggestion = sprintf(
+                'Query on "%s" executed %d times. In your %s model, add ->with(\'%s\') to eager load.',
+                $table,
+                $count,
+                $parentModel,
+                $relationship
+            );
+        } else {
+            $suggestion = sprintf(
+                'Query on "%s" executed %d times. Add ->with(\'%s\') to eager load this relationship.',
+                $table,
+                $count,
+                $relationship
+            );
+        }
+
+        return $this->appendLocation($suggestion, $file, $line);
+    }
+
+    private function appendLocation(string $suggestion, ?string $file, ?int $line): string
+    {
+        if ($file === null) {
+            return $suggestion;
+        }
+
+        if ($line !== null) {
+            return $suggestion . sprintf(' [%s:%d]', $file, $line);
+        }
+
+        return $suggestion . sprintf(' [%s]', $file);
+    }
+
     private function resolveSince(string $period): Carbon
     {
         return match ($period) {
@@ -208,6 +367,8 @@ class DashboardController extends Controller
                 DB::raw('ROUND(AVG(query_count), 0) as avg_queries'),
                 DB::raw('ROUND(AVG(memory_mb), 1) as avg_memory'),
                 DB::raw('MAX(grade) as worst_grade'),
+                DB::raw('MAX(controller) as controller'),
+                DB::raw('MAX(action) as action'),
                 DB::raw('SUM(CASE WHEN has_n_plus_one THEN 1 ELSE 0 END) as n_plus_one_hits'),
                 DB::raw('SUM(CASE WHEN has_slow_queries THEN 1 ELSE 0 END) as slow_query_hits'),
                 DB::raw('ROUND(COUNT(*) * AVG(duration_ms), 0) as impact_score')

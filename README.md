@@ -28,15 +28,18 @@ Most performance issues in Laravel apps go unnoticed until users complain. N+1 q
 
 - **N+1 Query Detection** -- detects duplicate query patterns and suggests eager loading fixes
 - **Slow Query Monitoring** -- identifies slow queries with optimization suggestions
+- **Request Detail View** -- click any request to see all queries, duplicate patterns, and fix suggestions
 - **Performance Grading** -- grades every request A-F based on response time
-- **Built-in Dashboard** -- dark-themed dashboard to visualize performance metrics
+- **Built-in Dashboard** -- dark-themed dashboard with auto-refresh to visualize performance metrics
+- **Impact Scoring** -- routes sorted by impact (requests x avg duration) to prioritize what matters most
+- **CSV Export** -- export route performance data for reporting and analysis
 - **Notifications** -- alerts via Slack, Email, or Telegram when issues are detected
 - **Queue Support** -- stores metrics asynchronously to avoid impacting request performance
 - **Privacy First** -- automatically redacts sensitive data from recorded queries
 - **Sampling** -- configurable sampling rate for high-traffic production environments
 - **Auto Cleanup** -- artisan command to purge old records with configurable retention
 - **High Memory Detection** -- alerts when requests exceed memory thresholds
-- **Route Aggregation** -- per-route performance breakdown to find your slowest endpoints
+- **Route Aggregation** -- per-route performance breakdown with controller names and impact scoring
 - **Trend Comparison** -- period-over-period comparison showing improvement or regression
 - **Artisan Status Command** -- quick terminal overview of performance health
 - **Octane Compatible** -- safe for long-running processes with proper state isolation
@@ -180,12 +183,20 @@ The built-in dashboard is available at `/performance-guard` and includes four vi
 
 | View | What it shows |
 |------|--------------|
-| **Overview** | Total requests, avg duration, query counts, memory, grades with trend indicators |
-| **N+1 Issues** | All requests where duplicate query patterns were detected |
-| **Slow Queries** | All requests containing slow database queries |
-| **Routes** | Per-route aggregation: avg duration, avg queries, memory, worst grade |
+| **Overview** | Total requests, avg duration, query counts, memory, grades with trend indicators (auto-refreshes every 30s) |
+| **N+1 Issues** | All requests where duplicate query patterns were detected -- click any row to see which queries to fix |
+| **Slow Queries** | All requests containing slow database queries -- click to see individual slow queries |
+| **Routes** | Per-route aggregation with controller name, impact score, and CSV export |
+| **Request Detail** | Full query breakdown with duplicate grouping, eager-load suggestions, and source file locations |
 
 Period filtering is available for 1 hour, 24 hours, 7 days, or 30 days.
+
+Click any request row to drill into the **Request Detail** view, which shows:
+
+- All SQL queries executed during the request
+- Duplicate query patterns grouped with fix suggestions (e.g., "add `->with('posts')` to eager load")
+- Slow queries highlighted with duration
+- Source file and line number for each query
 
 ### Dashboard Access Control
 
@@ -220,10 +231,12 @@ All dashboard data is available as JSON:
 | Endpoint | Description |
 |----------|-------------|
 | `GET /performance-guard/api` | Overview stats with grade distribution |
-| `GET /performance-guard/api/{uuid}` | Single record with all recorded queries |
+| `GET /performance-guard/api/{uuid}` | Single record with all recorded queries (JSON) |
+| `GET /performance-guard/request/{uuid}` | Request detail page with query breakdown (HTML) |
 | `GET /performance-guard/n-plus-one` | N+1 issues (paginated) |
 | `GET /performance-guard/slow-queries` | Slow query records (paginated) |
 | `GET /performance-guard/routes` | Route-level aggregated stats (paginated) |
+| `GET /performance-guard/routes/export` | Download route data as CSV |
 
 All endpoints accept a `?period=` parameter (`1h`, `24h`, `7d`, `30d`).
 
