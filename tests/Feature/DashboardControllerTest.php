@@ -273,3 +273,86 @@ it('auto-refreshes the dashboard page', function () {
     $response->assertStatus(200);
     $response->assertSee('auto-refresh', false);
 });
+
+it('suggests subquery for aggregate duplicate queries', function () {
+    $record = createRecord(['has_n_plus_one' => true]);
+
+    \Zufarmarwah\PerformanceGuard\Models\PerformanceQuery::insert([
+        [
+            'performance_record_id' => $record->id,
+            'sql' => 'select sum("total_amount") as aggregate from "bookings" where "status" = ?',
+            'normalized_sql' => 'select sum(?) as aggregate from "bookings" where "status" = ?',
+            'duration_ms' => 0.2,
+            'is_slow' => false,
+            'is_duplicate' => true,
+            'file' => null,
+            'line' => null,
+            'created_at' => now(),
+        ],
+        [
+            'performance_record_id' => $record->id,
+            'sql' => 'select sum("total_amount") as aggregate from "bookings" where "status" = ?',
+            'normalized_sql' => 'select sum(?) as aggregate from "bookings" where "status" = ?',
+            'duration_ms' => 0.2,
+            'is_slow' => false,
+            'is_duplicate' => true,
+            'file' => null,
+            'line' => null,
+            'created_at' => now(),
+        ],
+    ]);
+
+    $response = $this->get('/performance-guard/request/' . $record->uuid);
+
+    $response->assertStatus(200);
+    $response->assertSee('Aggregate query');
+    $response->assertSee('subquery');
+});
+
+it('stores web vitals via api', function () {
+    $response = $this->postJson('/performance-guard/api/vitals', [
+        'url' => '/dashboard',
+        'lcp_ms' => 1500.0,
+        'cls_score' => 0.05,
+        'inp_ms' => 120.0,
+    ]);
+
+    $response->assertStatus(201);
+    $response->assertJsonPath('success', true);
+
+    $this->assertDatabaseHas('performance_vitals', [
+        'url' => '/dashboard',
+    ]);
+});
+
+it('returns web vitals aggregation', function () {
+    \Zufarmarwah\PerformanceGuard\Models\PerformanceVital::create([
+        'url' => '/dashboard',
+        'lcp_ms' => 1500.0,
+        'cls_score' => 0.05,
+        'inp_ms' => 120.0,
+        'created_at' => now(),
+    ]);
+
+    \Zufarmarwah\PerformanceGuard\Models\PerformanceVital::create([
+        'url' => '/dashboard',
+        'lcp_ms' => 2000.0,
+        'cls_score' => 0.1,
+        'inp_ms' => 200.0,
+        'created_at' => now(),
+    ]);
+
+    $response = $this->getJson('/performance-guard/api/vitals');
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.overall.total_samples', 2);
+});
+
+it('validates web vitals input', function () {
+    $response = $this->postJson('/performance-guard/api/vitals', [
+        'lcp_ms' => 1500.0,
+    ]);
+
+    $response->assertStatus(422);
+});

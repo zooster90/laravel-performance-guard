@@ -59,10 +59,17 @@ class NPlusOneAnalyzer
      */
     private function findDuplicates(array $grouped, int $threshold): array
     {
+        $ignoredTables = config('performance-guard.ignored_tables', []);
         $duplicates = [];
 
         foreach ($grouped as $key => $group) {
             if ($group['count'] >= $threshold && $this->isSelectQuery($group['sql'])) {
+                $table = $this->extractTableName($group['sql']);
+
+                if ($table !== null && in_array($table, $ignoredTables, true)) {
+                    continue;
+                }
+
                 $duplicates[$key] = $group;
             }
         }
@@ -83,6 +90,22 @@ class NPlusOneAnalyzer
             $count = $group['count'];
             $location = $this->formatLocation($group['file'] ?? null, $group['line'] ?? null);
             $parentTable = $this->extractParentTable($group['sql']);
+
+            if ($table !== null && $this->isAggregateQuery($group['sql'])) {
+                $suggestion = sprintf(
+                    'Aggregate query on "%s" executed %d times. Consider using a subquery, DB::raw(), or precomputing these values instead of querying in a loop.',
+                    $table,
+                    $count
+                );
+
+                if ($location !== '') {
+                    $suggestion .= ' ' . $location;
+                }
+
+                $suggestions[] = $suggestion;
+
+                continue;
+            }
 
             if ($table !== null) {
                 $relationship = $this->guessRelationshipName($table);
@@ -135,6 +158,12 @@ class NPlusOneAnalyzer
         $trimmed = ltrim($sql);
 
         return stripos($trimmed, 'select') === 0;
+    }
+
+    private function isAggregateQuery(string $sql): bool
+    {
+        return (bool) preg_match('/\b(sum|count|avg|min|max)\s*\(/i', $sql)
+            && (bool) preg_match('/\bas\s+aggregate\b/i', $sql);
     }
 
     private function extractTableName(string $sql): ?string
